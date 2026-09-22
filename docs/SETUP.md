@@ -180,3 +180,50 @@ offering a button that cannot work.
   `secret` or `email` is redacted before it is written.
 - **Abandoned games** are swept by status, not deleted. Nothing removes rows
   automatically yet.
+
+---
+
+## Capacity and cost at 5,000 users
+
+Infrastructure is not the constraint. Voice minutes are.
+
+**Infrastructure headroom (free tiers):**
+
+| | Free tier | 5,000 users needs | Headroom |
+|---|---|---|---|
+| Supabase MAU | 50,000 | 5,000 | 10× |
+| Supabase Postgres | 500 MB | ~50 MB (a game row is ~1 KB) | 10× |
+| Vercel bandwidth | 100 GB/mo | well under | fine |
+
+So the database and hosting are a solved problem at this scale.
+
+**The actual exposure is AssemblyAI voice time.** The quota bounds what any one
+identity can take; it does not bound the total. Worst case:
+
+```
+5,000 anonymous identities × 30 min/day = 150,000 minutes/day
+```
+
+Nobody will use their full allowance, and real engagement will be a small
+fraction of that — but the ceiling is what a determined abuser or a front-page
+traffic spike aims at. Decide deliberately rather than discovering it on an
+invoice.
+
+Levers, in the order worth pulling:
+
+1. **Lower `ANON_DAILY_SECONDS`** in `src/lib/quota.ts`. 30 minutes is generous
+   for a first visit; 10 still lets someone play two full games. This single
+   number is the main dial on your maximum exposure.
+2. **Require an account past the free allowance.** Anonymous gets a taste,
+   signing in gets the real budget. Conversion and cost control in one move.
+3. **Add a global daily circuit breaker.** A single row holding
+   total seconds granted today, checked before any mint. When it trips, the app
+   keeps playing in keyboard/text mode and says voice is paused until tomorrow.
+   Not built yet — worth doing before any launch that could go viral.
+4. **Watch the ledger.** The query in *Operational notes* above shows the
+   heaviest identities in the last 24 hours. A single `device:` subject near the
+   cap every day is either a power user or a script.
+
+**One non-technical note:** Vercel's Hobby plan is for non-commercial use. A
+project positioning itself as a startup needs Pro (currently $20/month) to be
+within terms.
