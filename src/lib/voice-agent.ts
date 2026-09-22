@@ -87,6 +87,13 @@ export class VoiceAgentManager {
   private eventHandlers: Map<string, EventHandler[]> = new Map();
   private statusHandlers: ((status: VoiceAgentStatus) => void)[] = [];
 
+  // Voice budget reconciliation. A mint reserves the full session length up
+  // front; reporting the real duration hands the remainder back, so a 90-second
+  // game does not cost ten minutes of the player's daily allowance.
+  // See contracts/identity-and-quota.md cases 10-12.
+  private ledgerId: string | null = null;
+  private sessionStartedAt = 0;
+
   // Reconnect support
   private lastSessionConfig: Record<string, unknown> | null = null;
   private reconnectAttempts = 0;
@@ -249,7 +256,10 @@ export class VoiceAgentManager {
         const errBody = await tokenRes.text();
         throw new Error(`Token minting failed (${tokenRes.status}): ${errBody}`);
       }
-      const { token } = await tokenRes.json();
+      const tokenPayload = await tokenRes.json();
+      const { token } = tokenPayload;
+      this.ledgerId = tokenPayload.ledgerId ?? null;
+      this.sessionStartedAt = Date.now();
 
       // ── 4. Connect via WebSocket with token ──────────────────────────────
       this.ws = new WebSocket(`${AGENT_WS_URL}?token=${token}`);
@@ -281,6 +291,11 @@ export class VoiceAgentManager {
             this.reconnectAttempts++;
             const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 8000);
             console.log(`[VoiceAgent] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+            // Reconcile the dropped session before reconnecting: the retry
+            // mints a fresh token and reserves another full session, so
+            // without this a flaky connection would burn the daily allowance
+            // several times over for a few seconds of actual use.
+            this.reportSessionEnd();
             this.setStatus('connecting');
             setTimeout(() => {
               this.connect(this.lastSessionConfig as unknown as SessionConfig).catch(err => {
@@ -506,7 +521,43 @@ export class VoiceAgentManager {
     this.setStatus('disconnected');
   }
 
+  /**
+   * Hand back the unused part of the reservation.
+   *
+   * Fire-and-forget on purpose: the budget is already reserved, so a failure
+   * here costs the player some allowance but can never let a session run
+   * unbilled. It must not block teardown or surface an error to someone who is
+   * simply finishing a game.
+   *
+   * `keepalive` lets it complete when the page is unloading.
+   */
+  private reportSessionEnd(): void {
+    const ledgerId = this.ledgerId;
+    if (!ledgerId || !this.sessionStartedAt) return;
+
+    const actualSeconds = Math.max(
+      0,
+      Math.round((Date.now() - this.sessionStartedAt) / 1000),
+    );
+
+    // Clear first so a double teardown cannot double-report.
+    this.ledgerId = null;
+    this.sessionStartedAt = 0;
+
+    try {
+      void fetch('/api/session/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ledgerId, actualSeconds }),
+        keepalive: true,
+      }).catch(() => { /* allowance is forfeited, session is not */ });
+    } catch {
+      /* ignore */
+    }
+  }
+
   private cleanup(): void {
+    this.reportSessionEnd();
     this.flushPlayback();
     if (this.speakerNode) {
       this.speakerNode.disconnect();

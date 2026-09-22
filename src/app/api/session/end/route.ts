@@ -9,7 +9,7 @@
 // ============================================================
 
 import { NextResponse, NextRequest } from 'next/server';
-import { refundFor, subjectKey, type Tier } from '@/lib/quota';
+import { refundFor, subjectKey, GLOBAL_SUBJECT, type Tier } from '@/lib/quota';
 import { DEVICE_COOKIE, resolveIdentity } from '@/lib/identity';
 import { serviceClient, currentUserId, applyCookies, type CookieJar } from '@/lib/supabase/server';
 import { stageLog } from '@/lib/observability';
@@ -76,6 +76,10 @@ export async function POST(request: NextRequest) {
 
   if (refund > 0) {
     await db.rpc('release_voice_seconds', { p_subject: entry.subject, p_seconds: refund });
+    // The mint charged the deployment-wide budget as well as the identity's,
+    // so both are credited. Refunding only the identity would let the global
+    // ceiling ratchet down permanently as sessions end early.
+    await db.rpc('release_voice_seconds', { p_subject: GLOBAL_SUBJECT, p_seconds: refund });
   }
 
   // Case 11: mark reconciled only if it was not already, so a replayed request

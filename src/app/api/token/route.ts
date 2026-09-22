@@ -17,6 +17,8 @@ import {
   WINDOW_SECONDS,
   allowanceFor,
   subjectKey,
+  GLOBAL_SUBJECT,
+  globalDailySeconds,
   type Tier,
 } from '@/lib/quota';
 import {
@@ -141,6 +143,44 @@ export async function GET(request: NextRequest) {
           'You have used your voice time for today. It resets within 24 hours.',
         );
       }
+      // --- Deployment-wide circuit breaker ---
+      // Per-identity quota bounds one caller; it says nothing about thousands
+      // of callers each taking their full allowance. Reserve the same seconds
+      // against a global budget, and hand back the identity's reservation if
+      // the deployment is out of room.
+      const { data: globalData, error: globalError } = await db.rpc('reserve_voice_seconds', {
+        p_subject: GLOBAL_SUBJECT,
+        p_want: granted,
+        p_allowance: globalDailySeconds(),
+        p_window_secs: WINDOW_SECONDS,
+      });
+
+      if (!globalError) {
+        const globalGranted = Number(globalData ?? 0);
+
+        if (globalGranted <= 0) {
+          await db.rpc('release_voice_seconds', { p_subject: subject, p_seconds: granted });
+          stageLog('token.reserve', 'refused', { subject, reason: 'global_capacity' });
+          return refuse(
+            jar, 503, 'service_at_capacity',
+            'Voice is temporarily unavailable — the daily limit for everyone has been reached. ' +
+            'You can keep playing with the keyboard, and voice returns within 24 hours.',
+          );
+        }
+
+        // A partial global grant shrinks this session; give the identity back
+        // the seconds it will not get to use.
+        if (globalGranted < granted) {
+          await db.rpc('release_voice_seconds', {
+            p_subject: subject,
+            p_seconds: granted - globalGranted,
+          });
+          granted = globalGranted;
+        }
+      }
+      // A global-budget error is not fatal: the per-identity reservation above
+      // already holds, so the cap degrades open rather than blocking play.
+
       remaining = Math.max(0, allowanceFor(tier) - granted);
 
       const { data: led } = await db
@@ -164,6 +204,12 @@ export async function GET(request: NextRequest) {
   const release = async () => {
     if (!db || !ledgerId) return;
     await db.rpc('release_voice_seconds', { p_subject: subject, p_seconds: granted });
+    // The global budget was charged too, so it has to be credited too —
+    // otherwise failed mints would slowly exhaust the deployment's ceiling.
+    await db.rpc('release_voice_seconds', {
+      p_subject: GLOBAL_SUBJECT,
+      p_seconds: granted,
+    });
     await db.from('voice_ledger').delete().eq('id', ledgerId);
   };
 

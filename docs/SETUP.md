@@ -194,6 +194,7 @@ Infrastructure is not the constraint. Voice minutes are.
 | Supabase MAU | 50,000 | 5,000 | 10× |
 | Supabase Postgres | 500 MB | ~50 MB (a game row is ~1 KB) | 10× |
 | Vercel bandwidth | 100 GB/mo | well under | fine |
+| Voice ceiling | set by you | `VOICE_GLOBAL_DAILY_SECONDS` | hard stop |
 
 So the database and hosting are a solved problem at this scale.
 
@@ -216,10 +217,20 @@ Levers, in the order worth pulling:
    number is the main dial on your maximum exposure.
 2. **Require an account past the free allowance.** Anonymous gets a taste,
    signing in gets the real budget. Conversion and cost control in one move.
-3. **Add a global daily circuit breaker.** A single row holding
-   total seconds granted today, checked before any mint. When it trips, the app
-   keeps playing in keyboard/text mode and says voice is paused until tomorrow.
-   Not built yet — worth doing before any launch that could go viral.
+3. **The global daily circuit breaker is built and on by default.** A single
+   `global` row in `voice_budget` holds total seconds granted in the window,
+   checked before every mint. Default ceiling is 10 hours/day; override with
+   `VOICE_GLOBAL_DAILY_SECONDS`. When it trips, `/api/token` returns 503
+   `service_at_capacity` and the app keeps playing by keyboard and text —
+   a degradation, not an outage.
+
+   Check today's deployment-wide usage:
+
+   ```sql
+   select reserved_seconds, window_start
+     from voice_budget
+    where subject = 'global';
+   ```
 4. **Watch the ledger.** The query in *Operational notes* above shows the
    heaviest identities in the last 24 hours. A single `device:` subject near the
    cap every day is either a power user or a script.

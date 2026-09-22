@@ -66,6 +66,7 @@ Constants:
 | `ANON_DAILY_SECONDS` | 1800 | 30 min/day. Enough to play several full games; not enough to be worth farming. |
 | `USER_DAILY_SECONDS` | 7200 | 2 h/day for a signed-in account. |
 | `WINDOW` | rolling 24 h | Per identity, from first mint in the window. |
+| `GLOBAL_DAILY_SECONDS` | 36000 (10 h), env-overridable | Deployment-wide ceiling across **all** identities. Per-identity quota bounds one caller; this bounds the invoice. |
 
 ## Behaviour cases (input → expected output)
 
@@ -89,6 +90,11 @@ Constants:
 | 16 | Upstream AssemblyAI returns non-2xx | Upstream status propagated; **reservation released** | A failed mint must not cost the user |
 | 17 | Two concurrent mints, 1 session of budget left | Exactly one succeeds; the other gets 429 | Enforced by an atomic DB decrement, not read-then-write |
 | 18 | Cross-origin request in production | 403; no mint | Existing behaviour, must survive |
+| 19 | Global budget exhausted, identity has budget | 503 `service_at_capacity`; identity's reservation **released**; no mint | The circuit breaker. Voice stops for everyone; keyboard play continues |
+| 20 | Global budget has less left than the identity asked for | Session shrunk to the global remainder; identity credited the difference | A partial global grant is still a grant |
+| 21 | Mint fails after both budgets were charged | **Both** identity and global reservations released | Otherwise failed mints ratchet the ceiling down permanently |
+| 22 | Session reconciled early | Refund credited to **both** identity and global budgets | Same reason as 21 |
+| 23 | Global budget query errors | Mint proceeds on the identity reservation alone; warning logged | The cap degrades open — it must not become a new single point of failure |
 
 ## Edge cases that must be covered
 - Clock skew between reserve and refund — durations derive from stored
@@ -101,6 +107,24 @@ Constants:
   account wins; the device is re-linked.
 - Malformed `Set-Cookie` values, oversized cookies, and cookies containing `.`
   in the uuid segment.
+
+## The circuit breaker
+
+Per-identity quota answers "what can one person take". It does not answer "what
+can five thousand people take", which is the question an invoice asks. Every
+mint therefore reserves from two budgets: the identity's, and a single
+deployment-wide row keyed `global`.
+
+When the global ceiling is reached the app returns 503 `service_at_capacity`
+and keeps working — the board, the keyboard shortcuts, the screen reader
+announcements and text move entry are all unaffected, because none of them
+touch the voice agent. Only the microphone path pauses. That is why tripping
+this is a degradation and not an outage, and it is the reason the keyboard path
+is a hard requirement elsewhere in this project rather than a nicety.
+
+The ceiling is deliberately a blunt instrument. It is not fair-share, it is not
+per-region, and an early-rising abuser can consume it before anyone else wakes
+up. It exists to bound the worst case, not to allocate the good case.
 
 ## Explicitly out of scope
 - Billing, plans, and payment — `profiles.tier` is a string this contract reads

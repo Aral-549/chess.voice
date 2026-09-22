@@ -31,6 +31,30 @@ export function allowanceFor(tier: Tier): number {
   return ALLOWANCE_SECONDS[tier] ?? ALLOWANCE_SECONDS.anon;
 }
 
+/** Budget key for the whole deployment, not any one identity. Unambiguous
+ *  against per-identity keys, which are always `device:<uuid>` / `user:<uuid>`. */
+export const GLOBAL_SUBJECT = 'global';
+
+/** Default ceiling on voice time granted across ALL identities in a window.
+ *  10 hours/day: generous for a demo and for early real usage, and a hard stop
+ *  on what a traffic spike or a determined abuser can cost in one day.
+ *  Override with VOICE_GLOBAL_DAILY_SECONDS. */
+export const DEFAULT_GLOBAL_DAILY_SECONDS = 10 * 60 * 60;
+
+/**
+ * The deployment-wide ceiling.
+ *
+ * Per-identity quota bounds what one caller takes; it does nothing about
+ * 5,000 callers each taking their full allowance. This is the circuit breaker
+ * for that case. When it trips, voice stops for everyone until the window
+ * rolls — the app stays fully playable by keyboard and text, which is why
+ * tripping it is a degradation rather than an outage.
+ */
+export function globalDailySeconds(): number {
+  const raw = Number(process.env.VOICE_GLOBAL_DAILY_SECONDS);
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : DEFAULT_GLOBAL_DAILY_SECONDS;
+}
+
 export interface GrantDecision {
   /** Seconds to reserve. 0 means refuse with 429. */
   granted: number;

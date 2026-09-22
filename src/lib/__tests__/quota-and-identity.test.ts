@@ -8,7 +8,7 @@
 // Case numbers refer to contracts/identity-and-quota.md.
 // ============================================================
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import {
   MAX_SESSION_SECONDS,
   WINDOW_SECONDS,
@@ -16,6 +16,9 @@ import {
   decideGrant,
   refundFor,
   subjectKey,
+  GLOBAL_SUBJECT,
+  DEFAULT_GLOBAL_DAILY_SECONDS,
+  globalDailySeconds,
 } from '../quota';
 import {
   formatDeviceCookie,
@@ -251,5 +254,52 @@ describe('identity — resolution', () => {
     expect(subjectKey({ kind: 'user', id: 'abc' })).toBe('user:abc');
     expect(subjectKey({ kind: 'anon', id: 'abc' }))
       .not.toBe(subjectKey({ kind: 'user', id: 'abc' }));
+  });
+});
+
+describe('global circuit breaker', () => {
+  const ORIGINAL = process.env.VOICE_GLOBAL_DAILY_SECONDS;
+  afterEach(() => {
+    if (ORIGINAL === undefined) delete process.env.VOICE_GLOBAL_DAILY_SECONDS;
+    else process.env.VOICE_GLOBAL_DAILY_SECONDS = ORIGINAL;
+  });
+
+  it('defaults to a bounded daily ceiling rather than unlimited', () => {
+    delete process.env.VOICE_GLOBAL_DAILY_SECONDS;
+    expect(globalDailySeconds()).toBe(DEFAULT_GLOBAL_DAILY_SECONDS);
+    expect(globalDailySeconds()).toBeGreaterThan(0);
+    expect(Number.isFinite(globalDailySeconds())).toBe(true);
+  });
+
+  it('honours an override', () => {
+    process.env.VOICE_GLOBAL_DAILY_SECONDS = '3600';
+    expect(globalDailySeconds()).toBe(3600);
+  });
+
+  it('ignores junk overrides instead of disabling the cap', () => {
+    // The dangerous failure is a typo silently meaning "no limit".
+    for (const junk of ['', 'lots', '0', '-1', 'NaN', 'Infinity']) {
+      process.env.VOICE_GLOBAL_DAILY_SECONDS = junk;
+      expect(globalDailySeconds()).toBe(DEFAULT_GLOBAL_DAILY_SECONDS);
+    }
+  });
+
+  it('floors a fractional override', () => {
+    process.env.VOICE_GLOBAL_DAILY_SECONDS = '120.9';
+    expect(globalDailySeconds()).toBe(120);
+  });
+
+  it('uses a key that cannot collide with a real identity', () => {
+    // Identity subjects are always `device:<uuid>` / `user:<uuid>`.
+    expect(GLOBAL_SUBJECT).not.toContain(':');
+    expect(subjectKey({ kind: 'anon', id: GLOBAL_SUBJECT })).not.toBe(GLOBAL_SUBJECT);
+    expect(subjectKey({ kind: 'user', id: GLOBAL_SUBJECT })).not.toBe(GLOBAL_SUBJECT);
+  });
+
+  it('is large enough that one identity cannot trip it alone', () => {
+    // Otherwise a single anonymous visitor could take the whole deployment
+    // offline for everyone, which would be a denial of service, not a cap.
+    expect(globalDailySeconds()).toBeGreaterThan(allowanceFor('user'));
+    expect(globalDailySeconds()).toBeGreaterThan(allowanceFor('anon'));
   });
 });
