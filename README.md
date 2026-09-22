@@ -125,7 +125,7 @@ gaplessly, with barge-in support so you can interrupt the coach mid-sentence.
                                              │ tool.call
                                              ▼
   ┌──────────────────────────────────────────────────────┐
-  │  tool-handlers.ts  — 14 typed JSON-schema tools       │
+  │  tool-handlers.ts  — 18 typed JSON-schema tools       │
   ├──────────────────────────────────────────────────────┤
   │  chess-engine.ts   — chess.js + minimax, authoritative│
   │  game-verdict.ts   — single owner of win/loss/draw    │
