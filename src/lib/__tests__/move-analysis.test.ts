@@ -12,6 +12,8 @@
 import { describe, it, expect } from 'vitest';
 import { Chess } from 'chess.js';
 import { analyseMove, classify, BANDS, materialSwing } from '../move-analysis';
+import { ChessEngine } from '../chess-engine';
+import { handleToolCall } from '../tool-handlers';
 
 /** 1.e4 e5 2.Qh5 Nc6 — white to move, Qxf7+ throws the queen away. */
 function queenHangPosition(): string {
@@ -206,5 +208,45 @@ describe('materialSwing', () => {
     expect(materialSwing('b')).toBeGreaterThanOrEqual(materialSwing('n'));
     expect(materialSwing('n')).toBeGreaterThan(materialSwing('p'));
     expect(materialSwing('p')).toBeGreaterThan(0);
+  });
+});
+
+describe('explain_last_move answers about the right move', () => {
+  // Found by pressing W in the running app: it explained the engine's reply,
+  // not the player's blunder. `whose` was declared in the tool schema and
+  // never read, so it always analysed whatever move was most recent — which,
+  // by the time a player asks "why was that bad?", is always the opponent's.
+  const afterBlunder = () => {
+    const e = new ChessEngine();
+    // 1.e4 e5 2.Qh5 Nc6 3.Qxf7+?? Kxf7 — the engine's reply is forced.
+    for (const m of ['e4', 'e5', 'Qh5', 'Nc6', 'Qxf7+', 'Kxf7']) e.makeMove(m);
+    return e;
+  };
+
+  it('defaults to the player’s move, not the opponent’s reply', () => {
+    const out = JSON.parse(handleToolCall(afterBlunder(), 'explain_last_move', {}));
+
+    expect(out.success).toBe(true);
+    expect(out.whose).toBe('mine');
+    expect(out.move).toBe('Qxf7+');
+    expect(out.classification).toBe('blunder');
+    // The regression: "King to Felix 7 was forced" answered nobody's question.
+    expect(out.narration).not.toMatch(/forced/i);
+  });
+
+  it('explains the opponent’s move when asked for it', () => {
+    const out = JSON.parse(
+      handleToolCall(afterBlunder(), 'explain_last_move', { whose: 'opponent' }),
+    );
+
+    expect(out.success).toBe(true);
+    expect(out.whose).toBe('opponent');
+    expect(out.move).toBe('Kxf7');
+  });
+
+  it('says nothing useful is available before the player has moved', () => {
+    const out = JSON.parse(handleToolCall(new ChessEngine(), 'explain_last_move', {}));
+    expect(out.success).toBe(false);
+    expect(out.narration).toMatch(/not made a move/i);
   });
 });

@@ -1218,12 +1218,33 @@ export function handleToolCall(
 
     case 'explain_last_move': {
       const state = engine.getGameState();
-      const last = state.lastMove as unknown as
-        { san: string; before?: string } | null;
+
+      // "Why was that bad?" almost always means the player's own move. By the
+      // time they ask, the engine has already replied, so the most recent move
+      // on the board is the OPPONENT's — analysing that would answer a
+      // question nobody asked. Default to the player's last move and let
+      // `whose: 'opponent'` opt into the other one.
+      const wantsOpponent = String(args.whose ?? 'mine') === 'opponent';
+      const playerColor = 'w';
+
+      let history: { san: string; before?: string; color?: string }[] = [];
+      try {
+        const probe = new Chess();
+        if (state.pgn?.trim()) probe.loadPgn(state.pgn);
+        history = probe.history({ verbose: true }) as unknown as typeof history;
+      } catch {
+        history = [];
+      }
+
+      const last = wantsOpponent
+        ? [...history].reverse().find((m) => m.color !== playerColor)
+        : [...history].reverse().find((m) => m.color === playerColor);
 
       // Contract case 8: nothing to analyse is not an error.
       if (!last || !last.before) {
-        const narration = 'No moves have been played yet, so there is nothing to look at.';
+        const narration = wantsOpponent
+          ? 'The coach has not moved yet, so there is nothing to look at.'
+          : 'You have not made a move yet, so there is nothing to look at.';
         return JSON.stringify({ success: false, narration, fen: state.fen });
       }
 
@@ -1240,6 +1261,8 @@ export function handleToolCall(
         centipawn_loss: analysis.centipawnLoss,
         better_move: analysis.bestMove,
         forced: analysis.forced,
+        whose: wantsOpponent ? 'opponent' : 'mine',
+        move: last.san,
         fen: state.fen,
       });
     }

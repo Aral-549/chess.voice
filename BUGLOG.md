@@ -8,6 +8,39 @@ Entries are newest first.
 
 ---
 
+## 2026-09-23 — Two UI defects found by running the app
+
+- **Symptom 1:** Every new transcript entry scrolled the whole left column,
+  dragging the microphone button off screen while nobody was touching the page.
+- **Root cause 1:** `TranscriptLog` called `scrollIntoView`, which scrolls
+  *every* scrollable ancestor. The message list had no overflow of its own, so
+  the only scrollable ancestor was the left column — the entire control panel
+  moved on each message.
+- **Symptom 2:** Pressing **W** ("why was that bad?") after a blunder explained
+  the engine's reply instead of the player's move: *"King to Felix 7 was
+  forced — it was your only legal move."* That answers nobody's question.
+- **Root cause 2:** `explain_last_move` analysed `lastMove`, the most recent
+  move on the board. By the time a player asks why something was bad, the
+  engine has already replied, so the most recent move is always the
+  opponent's. The tool schema declared a `whose` parameter to select between
+  them; the handler never read it.
+- **Stage/module:** `src/components/voice/TranscriptLog.tsx` and
+  `src/lib/tool-handlers.ts`.
+- **Fix:** The message list owns its own scroll and is moved with `scrollTop`,
+  which cannot escape the element. Following is sticky-by-default and pauses
+  while the reader has scrolled up — measured from their scroll events, not
+  from position at append time, because once content first overflows
+  `scrollTop` is still 0 and reads as "scrolled away" forever. For the second,
+  `whose` is now honoured and defaults to the player's most recent move.
+- **Regression case added:** `src/lib/__tests__/move-analysis.test.ts` — 3
+  cases pinning the default, the opt-in opponent path, and the empty-game
+  message. **Verified to fail against the reintroduced bug.** The scroll
+  behaviour is verified by driving the running app, not by unit test: it is a
+  layout interaction with no DOM harness in this suite.
+- **Status:** **verified** (analysis) / fixed, manually verified (scroll)
+
+---
+
 ## 2026-09-22 — Token rate limiter did nothing in production
 
 - **Symptom:** No visible symptom, which is the point. `/api/token` appeared to

@@ -38,15 +38,17 @@ interface ChessBoardPanelProps {
 }
 
 /**
- * Modern Apple-designed Chessboard Panel.
+ * Chessboard panel.
+ *
+ * The board is sized to take every pixel the column can spare — it is the
+ * thing sighted players actually look at, and it was previously capped small
+ * to leave room for window chrome that has since been removed.
+ *
  * Features:
- * - Expansive, high-visibility 620px board canvas
- * - Dual digital chess clocks (White & Black) with low-time & urgent warnings
- * - Blitz / Time Control mode pill selector + Bot Mastery level pill selector
- * - Apple Human Interface Guidelines: glassmorphism, 28px squircle radii, subtle gradients
- * - Apple-style Opponent and Player profile cards with live turn indicators
- * - Custom tournament linen/slate square colors with soft ambient depth
- * - Collapsible Apple segmented pill control with hotkey (B)
+ * - Dual chess clocks (White & Black) with low-time and urgent warnings
+ * - Time-control and difficulty selectors
+ * - Opponent and player bars with live turn indicators
+ * - Collapsible with hotkey (B); hidden and locked in blindfold mode
  */
 export function ChessBoardPanel({
   fen,
@@ -92,19 +94,11 @@ export function ChessBoardPanel({
     <section
       aria-label="Interactive visual chessboard"
       className={cn(
-        "w-full max-h-full flex flex-col justify-center rounded-2xl sm:rounded-[24px] border border-border/80 bg-bg-raised/70 p-2.5 sm:p-3.5 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition-all duration-300 select-none",
-        "ring-1 ring-white/10 dark:ring-white/5",
+        "w-full max-h-full flex flex-col justify-center rounded-xl border border-border/60 bg-bg-raised/60 p-2 sm:p-2.5 transition-all duration-300 select-none",
       )}
     >
-      {/* macOS / Apple Style Header Bar */}
       <div className="mb-1.5 sm:mb-2 flex items-center justify-between gap-2 border-b border-border/50 pb-1.5 shrink-0">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-          {/* Subtle macOS window indicator dots */}
-          <div className="hidden sm:flex items-center gap-1.5 opacity-60" aria-hidden="true">
-            <span className="h-2 w-2 rounded-full bg-rose-500/80" />
-            <span className="h-2 w-2 rounded-full bg-amber-500/80" />
-            <span className="h-2 w-2 rounded-full bg-emerald-500/80" />
-          </div>
           <div className="min-w-0">
             <h2 className="font-display text-sm sm:text-base font-semibold tracking-tight text-fg truncate">
               Visual Chessboard
@@ -115,7 +109,7 @@ export function ChessBoardPanel({
           </div>
         </div>
 
-        {/* Apple Segmented Pill Actions */}
+        {/* Board actions */}
         <div className="flex items-center gap-1.5 shrink-0">
           {visible && (
             <button
@@ -260,8 +254,13 @@ export function ChessBoardPanel({
             </div>
           </div>
 
-          {/* Expansive Apple Chess Board Canvas — fits mobile and desktop viewports */}
-          <div className="relative flex w-full max-w-[min(100%,calc(100vh-330px),400px)] xl:max-w-[min(100%,calc(100vh-330px),440px)] items-center justify-center p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-border/80 bg-gradient-to-b from-stone-200/60 to-stone-300/40 dark:from-stone-900/80 dark:to-stone-950/90 shadow-[inset_0_2px_8px_rgba(0,0,0,0.15)] backdrop-blur-md shrink-0">
+          {/* The board is the product. Removing the window chrome above bought
+              back vertical space, so the reserve drops from 330px to 250px and
+              the hard caps rise — on a 1080p screen this is roughly a 40%
+              larger board. The frame is one hairline now; the stacked
+              gradient, inset shadow and blur were reading as a bezel around
+              the board rather than as part of it. */}
+          <div className="relative flex w-full max-w-[min(100%,calc(100vh-250px),560px)] xl:max-w-[min(100%,calc(100vh-250px),640px)] items-center justify-center p-1 rounded-lg border border-border/50 bg-bg-raised/40 shrink-0">
             {/* Game over overlay — dims board and shows result */}
             {isGameOver && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl sm:rounded-2xl bg-black/50 backdrop-blur-sm pointer-events-none">

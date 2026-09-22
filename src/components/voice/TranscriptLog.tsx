@@ -15,13 +15,45 @@ export function TranscriptLog({ entries, onClear }: TranscriptLogProps) {
   const [search, setSearch] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // Auto-scroll to bottom on new entries
+  // Follow new entries — but only inside this list, and only if the reader is
+  // already at the bottom.
+  //
+  // The previous version called scrollIntoView, which scrolls *every*
+  // scrollable ancestor. The list had no overflow of its own, so the whole
+  // left column jumped on each new message and dragged the microphone button
+  // off screen while nobody was touching it. Setting scrollTop on this element
+  // cannot escape it.
+  //
+  // Staying put when the reader has scrolled up matters more here than in a
+  // normal chat: someone re-reading an earlier board description should not be
+  // yanked to the bottom because the coach said something.
+  // Follow by default; stop the moment the reader scrolls up; resume when they
+  // come back to the bottom. Measuring "were we at the bottom?" inside the
+  // append effect does not work — once the content first overflows, scrollTop
+  // is still 0 and it reads as "scrolled away" forever, so the log silently
+  // stops following. The intent has to be tracked from the reader's own scroll
+  // events instead.
+  const stickToBottom = useRef(true);
+
   useEffect(() => {
     const node = scrollRef.current;
-    if (node) {
-      const lastChild = node.lastElementChild;
-      lastChild?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
+    if (!node) return;
+
+    const onScroll = () => {
+      const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
+      stickToBottom.current = distanceFromBottom < 48; // a line or so of slack
+    };
+    node.addEventListener("scroll", onScroll, { passive: true });
+    return () => node.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!node || !stickToBottom.current) return;
+    // scrollTop, not scrollIntoView: the latter scrolls every scrollable
+    // ancestor, which used to drag the whole left column — and the microphone
+    // button with it — on every new message.
+    node.scrollTop = node.scrollHeight;
   }, [entries.length]);
 
   const filteredEntries = useMemo(() => {
@@ -56,7 +88,7 @@ export function TranscriptLog({ entries, onClear }: TranscriptLogProps) {
   };
 
   return (
-    <div className="panel flex flex-col w-full border-border/80 shadow-md shrink-0">
+    <div className="panel flex flex-col w-full border-border/80 shadow-md flex-1 min-h-0 overflow-hidden">
       {/* Header with Title & Action Tools */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-2.5 bg-bg-raised">
         <div className="flex items-center gap-2">
@@ -133,7 +165,11 @@ export function TranscriptLog({ entries, onClear }: TranscriptLogProps) {
       </div>
 
       {/* Message List */}
-      <ol ref={scrollRef} className="space-y-3 p-3 sm:p-4">
+      <ol
+        ref={scrollRef}
+        className="space-y-3 p-3 sm:p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain"
+        tabIndex={0}
+      >
         {filteredEntries.length === 0 ? (
           <li className="flex items-center justify-center h-full text-xs text-fg-muted italic">
             No matching messages.

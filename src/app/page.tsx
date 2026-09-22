@@ -14,6 +14,7 @@ import { SettingsToolbar } from "@/components/a11y/SettingsToolbar";
 import { ShortcutsModal } from "@/components/a11y/ShortcutsModal";
 import { GameOverModal } from "@/components/a11y/GameOverModal";
 import { AccountPanel } from "@/components/account/AccountPanel";
+import { cn } from "@/lib/utils";
 import { announce } from "@/lib/announce";
 import { useGamePersistence } from "@/hooks/useGamePersistence";
 import { gameOverVerdict } from "@/lib/game-verdict";
@@ -51,6 +52,10 @@ export default function Home() {
   // BUG 1 fix: track whether the game-over modal was dismissed for this game
   const [gameOverDismissed, setGameOverDismissed] = useState(false);
   const [playMode, setPlayMode] = useState<"normal" | "blindfold" | "handsfree">("normal");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  /** A game is underway once a move exists. Drives the header collapse. */
+  const inPlay = coach.moveHistory.length > 0;
   // Reset dismissal when a new game starts (isGameOver goes false).
   // Adjusted during render rather than in an effect: an effect would commit a
   // first paint still showing the stale dismissal, then immediately re-render.
@@ -193,16 +198,60 @@ export default function Home() {
         Skip to voice controls
       </a>
 
-      {/* ── Slim header ── */}
-      <header className="flex-shrink-0 border-b border-border px-4 py-2.5 backdrop-blur-md bg-bg/80 z-30">
+      {/* ── Header: full before the first move, compact once play starts ──
+          Before a game it is orientation — the name, the one instruction that
+          matters, every setting. Once a move has been played it is overhead
+          competing with the board, so it collapses to a single row and hands
+          the height back. Settings stay one click away rather than always
+          on screen. */}
+      <header
+        className={cn(
+          "flex-shrink-0 border-b border-border px-4 backdrop-blur-md bg-bg/80 z-30 transition-[padding] duration-300",
+          inPlay ? "py-1.5" : "py-2.5",
+        )}
+      >
         <div className="mx-auto flex max-w-screen-2xl items-center gap-3 flex-wrap">
           <div className="flex items-center gap-3 min-w-0 shrink-0">
-            <h1 className="font-display text-lg font-semibold tracking-tight whitespace-nowrap">♔ VoiceChessmate</h1>
-            <p className="hidden sm:block text-xs text-fg-muted whitespace-nowrap">Hold J to speak</p>
+            <h1
+              className={cn(
+                "font-display font-semibold tracking-tight whitespace-nowrap transition-[font-size] duration-300",
+                inPlay ? "text-base" : "text-lg",
+              )}
+            >
+              ♔ VoiceChessmate
+            </h1>
+            {!inPlay && (
+              <p className="hidden sm:block text-xs text-fg-muted whitespace-nowrap">Hold J to speak</p>
+            )}
           </div>
 
-          {/* Settings toolbar — fills remaining width */}
+          {/* Settings toolbar. Once a game is underway this collapses behind a
+              toggle: it is a wall of controls competing with the board, and
+              every one of them already has a keyboard shortcut, so nothing
+              becomes unreachable by hiding it. */}
+          {inPlay && !settingsOpen ? (
+            <div className="flex-1 min-w-0 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                aria-expanded={false}
+                className="rounded-lg border border-border px-3 py-1 text-xs font-medium text-fg-muted hover:text-fg hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Settings
+              </button>
+            </div>
+          ) : (
           <div className="flex-1 min-w-0">
+            {inPlay && (
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(false)}
+                aria-expanded
+                className="mb-1 rounded-lg border border-border px-2 py-0.5 text-[11px] text-fg-muted hover:text-fg focus-visible:outline focus-visible:outline-2"
+              >
+                Hide settings
+              </button>
+            )}
             <SettingsToolbar
               settings={settings}
               onToggleHighContrast={toggleHighContrast}
@@ -217,6 +266,7 @@ export default function Home() {
               onSetTheme={setTheme}
             />
           </div>
+          )}
 
           <div className="flex items-center gap-2 shrink-0">
             {playMode !== "normal" && (
@@ -250,14 +300,20 @@ export default function Home() {
         id="main-content"
         className="flex-1 overflow-y-auto lg:overflow-hidden mx-auto w-full max-w-screen-2xl flex flex-col lg:flex-row min-h-0"
       >
-        {/* ── Left: scrollable voice + transcript ── */}
-        <div className="flex flex-col gap-3 px-3 pt-3 pb-8 lg:px-4 lg:pt-4 lg:pb-8 w-full lg:w-[400px] xl:w-[440px] shrink-0 lg:border-r lg:border-border overflow-y-auto min-h-0 h-full max-h-full overscroll-contain">
+        {/* ── Left: controls pinned, transcript scrolls ──
+            The column itself no longer scrolls. Everything above the
+            transcript is shrink-0 and stays put, so the microphone button is
+            always reachable without hunting for it — which matters most for
+            the people least able to hunt. The transcript owns the only
+            scrollbar in this column. */}
+        <div className="flex flex-col gap-3 px-3 pt-3 pb-3 lg:px-4 lg:pt-4 lg:pb-4 w-full lg:w-[400px] xl:w-[440px] shrink-0 lg:border-r lg:border-border lg:overflow-hidden min-h-0 h-full max-h-full">
           {!coach.isVoiceSupported && (
             <p role="alert" className="panel w-full border-danger p-3 text-sm flex-shrink-0">
               Voice input isn&apos;t available in this browser. Use the text box below.
             </p>
           )}
 
+          <div className="shrink-0 flex flex-col gap-3">
           <ListenButton
             status={coach.status}
             isHolding={isHoldingJ}
@@ -280,13 +336,14 @@ export default function Home() {
             onRepeat={coach.repeatLast}
           />
           <TextFallbackForm onSubmit={coach.submitTextFallback} emphasized={!coach.isVoiceSupported} />
+          </div>
           <TranscriptLog entries={coach.entries} />
         </div>
 
         {/* ── Right: fixed height, no scroll — board fits perfectly ── */}
-        <div className="flex-1 overflow-hidden flex flex-col items-center justify-center p-2 sm:p-3 lg:p-3 min-h-0 h-full">
+        <div className="flex-1 overflow-hidden flex flex-col items-center justify-center p-1.5 sm:p-2 min-h-0 h-full">
           {/* This wrapper constrains the board to the available column height */}
-          <div className="w-full h-full flex flex-col items-center justify-center max-w-[620px] min-h-0">
+          <div className="w-full h-full flex flex-col items-center justify-center max-w-[760px] xl:max-w-[860px] min-h-0">
             <ChessBoardPanel
               fen={coach.fen}
               moveHistory={coach.moveHistory}
