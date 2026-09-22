@@ -62,10 +62,19 @@ Entries are newest first.
 - **Fix:** Introduced an explicit `CookieJar` (`src/lib/supabase/server.ts`):
   the Supabase client pushes refreshed cookies into an array, and `applyCookies`
   writes them onto the real response at the end. No scratch response exists.
-- **Regression case added:** NOT YET — see *Known gaps*. Found by running the
-  server and calling the endpoint, which is the only thing that would have
-  caught it.
-- **Status:** fixed, **not verified**
+- **Regression case added:** `src/lib/__tests__/token-route.test.ts` — 20
+  cases, including a source-level guard asserting no route handler calls
+  `NextResponse.next()`.
+
+  Worth stating plainly: the handler tests **cannot** reproduce this bug.
+  `NextResponse.next()` constructs happily under vitest and only throws inside
+  the real Next.js server, so a behavioural test passes either way — verified
+  by reintroducing the call and watching all 14 behavioural cases still pass.
+  The banned-API guard does catch it, and that is what a runtime-only failure
+  mode honestly allows. The rest of the file covers what *is* testable:
+  identity, cookie issuance, upstream call ordering, and the fact that a
+  response can be constructed at all.
+- **Status:** **verified** (by source guard; see the caveat above)
 - **Note:** the failure ordering is the lesson. The response was constructed
   *after* the paid upstream call, so every 500 still cost a token. Side effects
   that cost money belong after everything that can throw, not before.
@@ -223,30 +232,29 @@ Entries are newest first.
 
 Tracked honestly rather than quietly closed.
 
-1. **No route-handler tests exist.** Everything under `src/app/api/` is covered
-   only by its extracted pure logic (`lib/quota.ts`, `lib/identity.ts`,
-   `lib/elo.ts`, all well covered) plus manual exercise with `curl`. The suite
-   runs in a pure Node environment with no HTTP harness, so a handler test needs
-   a `NextRequest` fixture, a fetch mock and a Supabase double — infrastructure
-   that does not exist yet.
+1. **Route-handler coverage is partial.** `/api/token` now has a real harness
+   (`token-route.test.ts`, 20 cases) covering the degraded, no-database path:
+   identity and cookie issuance, refusal before spending, upstream failures,
+   and key non-leakage. What is still uncovered:
 
-   This gap is not theoretical: the `NextResponse.next()` bug above passed
-   typecheck, lint and 413 unit tests, and failed on the first real request.
+   - **Anything requiring a database.** The quota enforcement path, the ledger,
+     the circuit breaker, the refund in `/api/session/end`, and all of
+     `/api/games` and `/api/auth/claim` need a Supabase double. The policy
+     underneath them (`lib/quota.ts`, `lib/elo.ts`) is well covered; the SQL
+     and the wiring are not.
+   - **`reserve_voice_seconds` concurrency.** Contract case 17 — two
+     simultaneous mints with one session of budget left — depends on
+     `SELECT … FOR UPDATE` behaving under real contention. That needs a live
+     Postgres, not a mock, and has only been reasoned about.
+   - **The cross-origin 403 (case 18),** which requires `NODE_ENV=production`
+     inside the test process.
+   - **Anything that only fails in the Next.js runtime**, as the
+     `NextResponse.next()` entry above documents. Source-level guards are the
+     available tool there.
 
-   The cases to write when that harness lands:
-   - A mint returns 200 with a `budget` block and sets a signed `vcm_device`
-     cookie; a second mint reuses it and sets none.
-   - The allowance is enforced: session N+1 past the budget returns 429
-     `quota_exhausted` and never calls upstream.
-   - A failed upstream mint releases the reservation (nothing is charged).
-   - `/api/session/end` refunds once and is a no-op when replayed.
-   - `/api/games` rejects an unparseable PGN with 400 and writes nothing.
-   - A game completed twice is rated once.
-   - A cross-origin request in production returns 403 and never calls upstream.
-   - No response body, header, or log line contains any substring of
-     `ASSEMBLYAI_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY`.
-   - Every route returns a well-formed response — the regression case for the
-     `NextResponse.next()` failure.
+   The honest summary: policy is tested, plumbing is tested where it can be
+   reached without a database, and the database path has been exercised by hand
+   but not automatically.
 
 2. **`src/lib/speech.ts` is not wired into the application.** The browser
    `speechSynthesis` path was removed in favour of AssemblyAI agent audio,
