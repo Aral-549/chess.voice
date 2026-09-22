@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest a capability or improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the situation you are stuck in, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: keyboard
+    attributes:
+      label: What is the keyboard path for this?
+      description: >
+        Every feature in VoiceChessmate needs a keyboard path — voice
+        complements the keyboard, it never replaces it. A proposal that only
+        works by voice will need one designed before it can be accepted.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have considered

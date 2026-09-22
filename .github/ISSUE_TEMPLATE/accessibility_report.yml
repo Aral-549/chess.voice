@@ -1,0 +1,56 @@
+name: Accessibility barrier
+description: Something was unusable or hard to use with a screen reader, keyboard, or low vision
+labels: [accessibility, priority]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Accessibility reports are treated as defects, not enhancements. Thank
+        you for taking the time.
+
+  - type: textarea
+    id: barrier
+    attributes:
+      label: What were you trying to do, and what blocked you?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did you hit it?
+      multiple: true
+      options:
+        - Keyboard navigation / focus order
+        - Screen reader announcements (live regions)
+        - Voice input
+        - Spoken coach output
+        - Earcons / audio cues
+        - Contrast, colour, or text size
+        - Modal dialogs
+        - Chess board itself
+    validations:
+      required: true
+
+  - type: input
+    id: at
+    attributes:
+      label: Assistive technology and version
+      placeholder: NVDA 2025.1 / JAWS 2026 / VoiceOver / Orca 47 / keyboard only
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened instead?
+      description: >
+        If you know the WCAG criterion or the pattern you expected, mention it —
+        but plain description is just as welcome.

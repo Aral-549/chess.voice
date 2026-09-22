@@ -1,0 +1,86 @@
+name: Bug report
+description: Something behaved incorrectly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing this. If the bug caused the agent to make or announce
+        a **wrong move**, please add the `safety` label — those are triaged
+        first, ahead of everything else.
+
+  - type: textarea
+    id: symptom
+    attributes:
+      label: What actually happened
+      description: >
+        Describe what you observed, not what you think caused it. If the coach
+        spoke, quote it as closely as you can remember.
+      placeholder: |
+        I said "knight to f3" and the coach played Nc3 instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start a new game at Intermediate
+        2. Hold J and say "knight to f3"
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: fen
+    attributes:
+      label: Board position (FEN), if known
+      description: >
+        Press D to have the board described, or copy the FEN from the move
+        history panel. This makes the bug reproducible as a test case.
+      placeholder: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Which stage looked wrong?
+      description: Best guess is fine — leave blank if unsure.
+      options:
+        - Not sure
+        - Speech recognition (it heard the wrong words)
+        - Move parsing (right words, wrong move)
+        - Chess engine (illegal or bad move played)
+        - Audio output (wrong, missing, or garbled speech)
+        - Screen reader / keyboard navigation
+        - UI / visual board
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Chrome 140 on Windows 11
+    validations:
+      required: true
+
+  - type: input
+    id: at
+    attributes:
+      label: Screen reader / assistive tech, if any
+      placeholder: NVDA 2025.1, JAWS, VoiceOver, Orca, none
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Browser console output
+      description: >
+        Open DevTools (F12) → Console. Paste anything red. This is rendered as
+        code, so no backticks needed.
+      render: text

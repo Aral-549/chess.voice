@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Try the live demo
+    url: https://voicechessmate.vercel.app/
+    about: Reproduce the issue on the deployed build before filing.
+  - name: Security vulnerability
+    url: https://github.com/Aral-549/voicechessmate-assemblyai/security/advisories/new
+    about: Report credential or token-minting issues privately, not as a public issue.

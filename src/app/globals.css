@@ -1,0 +1,220 @@
+@import "tailwindcss";
+
+/*
+  DESIGN TOKENS. Mood: a quiet study, not a SaaS landing page — warm, low
+  glare, high legibility. Every color pair here was checked for WCAG AA
+  contrast at minimum against --color-bg / --color-bg-raised.
+*/
+:root {
+  --color-bg: oklch(0.17 0.02 55);         /* warm near-black, walnut tint */
+  --color-bg-raised: oklch(0.22 0.024 55);
+  --color-fg: oklch(0.96 0.012 85);        /* warm cream, not glaring pure white */
+  --color-fg-muted: oklch(0.76 0.02 80);
+  --color-accent: oklch(0.8 0.15 85);      /* brass/gold */
+  --color-accent-2: oklch(0.62 0.1 155);   /* felt green — used sparingly */
+  --color-danger: oklch(0.66 0.18 30);     /* check/illegal — always paired with text, never color alone */
+  --color-border: oklch(0.35 0.02 55);
+
+  --color-board-light: oklch(0.86 0.035 75);
+  --color-board-dark: oklch(0.4 0.05 50);
+  --color-board-highlight: oklch(0.75 0.16 85);
+
+  --font-display: var(--font-fraunces);
+  --font-body: var(--font-public-sans);
+  --font-mono: var(--font-plex-mono);
+}
+
+/* Tournament Green theme */
+:root[data-theme="green"] {
+  --color-bg: oklch(0.16 0.025 150);
+  --color-bg-raised: oklch(0.21 0.035 150);
+  --color-fg: oklch(0.96 0.01 120);
+  --color-fg-muted: oklch(0.78 0.02 130);
+  --color-accent: oklch(0.78 0.18 140);
+  --color-accent-2: oklch(0.82 0.16 85);
+  --color-border: oklch(0.32 0.03 150);
+  --color-board-light: oklch(0.89 0.02 125);
+  --color-board-dark: oklch(0.42 0.09 145);
+  --color-board-highlight: oklch(0.8 0.16 85);
+}
+
+/* Midnight Slate theme */
+:root[data-theme="slate"] {
+  --color-bg: oklch(0.15 0.02 245);
+  --color-bg-raised: oklch(0.20 0.03 245);
+  --color-fg: oklch(0.95 0.01 240);
+  --color-fg-muted: oklch(0.75 0.02 245);
+  --color-accent: oklch(0.76 0.15 220);
+  --color-accent-2: oklch(0.8 0.15 85);
+  --color-border: oklch(0.32 0.03 250);
+  --color-board-light: oklch(0.88 0.02 230);
+  --color-board-dark: oklch(0.38 0.07 245);
+  --color-board-highlight: oklch(0.8 0.16 85);
+}
+
+/* High-contrast mode: a real accessibility setting, not a cosmetic toggle —
+   pushes to near-maximum contrast (WCAG AAA territory) for low-vision users. */
+:root[data-contrast="high"],
+:root[data-theme="high-contrast"] {
+  --color-bg: oklch(0.06 0 0);
+  --color-bg-raised: oklch(0.1 0 0);
+  --color-fg: oklch(1 0 0);
+  --color-fg-muted: oklch(0.92 0 0);
+  --color-accent: oklch(0.88 0.19 95);
+  --color-border: oklch(0.55 0 0);
+  --color-board-light: oklch(0.95 0 0);
+  --color-board-dark: oklch(0.18 0 0);
+  --color-board-highlight: oklch(0.88 0.19 95);
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-bg-raised: var(--color-bg-raised);
+  --color-fg: var(--color-fg);
+  --color-fg-muted: var(--color-fg-muted);
+  --color-accent: var(--color-accent);
+  --color-accent-2: var(--color-accent-2);
+  --color-danger: var(--color-danger);
+  --color-border: var(--color-border);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-body);
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+/* Never remove focus outlines — this app is keyboard-first by design. Make
+   them impossible to miss instead of the browser default. */
+:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.panel {
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-raised);
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  padding: 0.75rem 1.25rem;
+  border-radius: 0 0 8px 0;
+  font-weight: 600;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+/* Visually hidden but still readable by screen readers — used to announce
+   things instantly without waiting on a visual typewriter animation. */
+.sr-only-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--color-accent) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 22px color-mix(in oklch, var(--color-accent) 0%, transparent);
+  }
+}
+.listening-pulse {
+  animation: pulse-ring 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes audio-wave {
+  0%, 100% {
+    height: 6px;
+  }
+  50% {
+    height: 28px;
+  }
+}
+
+.animate-audio-bar-1 {
+  animation: audio-wave 1.1s ease-in-out infinite 0.1s;
+}
+.animate-audio-bar-2 {
+  animation: audio-wave 0.9s ease-in-out infinite 0.25s;
+}
+.animate-audio-bar-3 {
+  animation: audio-wave 1.2s ease-in-out infinite 0.05s;
+}
+.animate-audio-bar-4 {
+  animation: audio-wave 0.8s ease-in-out infinite 0.35s;
+}
+.animate-audio-bar-5 {
+  animation: audio-wave 1.05s ease-in-out infinite 0.2s;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}

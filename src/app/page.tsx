@@ -1,0 +1,260 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useVoiceChessCoach } from "@/hooks/useVoiceChessCoach";
+import { useA11ySettings } from "@/hooks/useA11ySettings";
+import { useA11yFeedback } from "@/hooks/useA11yFeedback";
+import { useHotkeys } from "@/hooks/useHotkeys";
+import { ListenButton } from "@/components/voice/ListenButton";
+import { CaptionBar } from "@/components/voice/CaptionBar";
+import { TranscriptLog } from "@/components/voice/TranscriptLog";
+import { TextFallbackForm } from "@/components/voice/TextFallbackForm";
+import { ChessBoardPanel } from "@/components/board/ChessBoardPanel";
+import { SettingsToolbar } from "@/components/a11y/SettingsToolbar";
+import { ShortcutsModal } from "@/components/a11y/ShortcutsModal";
+import { GameOverModal } from "@/components/a11y/GameOverModal";
+import { gameOverVerdict } from "@/lib/game-verdict";
+import {
+  playGameStartSound,
+  playVictorySound,
+  playDefeatSound,
+  playDrawSound,
+  resumeAudioContext,
+} from "@/lib/sound-effects";
+
+export default function Home() {
+  const { settings, toggleHighContrast, toggleBoardVisible, toggleSoundCues, toggleAnnounceCaptions, cycleFontScale, setTheme } =
+    useA11ySettings();
+
+  const coach = useVoiceChessCoach({
+    onBoardAction: (action) => {
+      if (action === "show" && !settings.boardVisible) toggleBoardVisible();
+      else if (action === "hide" && settings.boardVisible) toggleBoardVisible();
+    },
+    onSettingsAction: (setting) => {
+      if (setting === "high_contrast") toggleHighContrast();
+      else if (setting === "sound_cues") toggleSoundCues();
+      else if (setting === "announce_captions") toggleAnnounceCaptions();
+    },
+  });
+
+  // BUG 1 fix: track whether the game-over modal was dismissed for this game
+  const [gameOverDismissed, setGameOverDismissed] = useState(false);
+  // Reset dismissal when a new game starts (isGameOver goes false).
+  // Adjusted during render rather than in an effect: an effect would commit a
+  // first paint still showing the stale dismissal, then immediately re-render.
+  // This is React's documented "adjust state when a prop changes" pattern.
+  const [prevGameOver, setPrevGameOver] = useState(coach.isGameOver);
+  if (prevGameOver !== coach.isGameOver) {
+    setPrevGameOver(coach.isGameOver);
+    if (!coach.isGameOver) setGameOverDismissed(false);
+  }
+
+  // Play game-start sound on first interaction (satisfies browser autoplay policy)
+  useEffect(() => {
+    const onFirstInteraction = () => {
+      resumeAudioContext();
+      playGameStartSound();
+      window.removeEventListener("click", onFirstInteraction);
+      window.removeEventListener("keydown", onFirstInteraction);
+    };
+    window.addEventListener("click", onFirstInteraction, { once: true });
+    window.addEventListener("keydown", onFirstInteraction, { once: true });
+    return () => {
+      window.removeEventListener("click", onFirstInteraction);
+      window.removeEventListener("keydown", onFirstInteraction);
+    };
+  }, []);
+
+  // Play win/loss/draw sound when game ends (only once per game)
+  const gameOverSoundPlayedRef = useState(false);
+  useEffect(() => {
+    if (!coach.isGameOver || gameOverDismissed) return;
+    if (gameOverSoundPlayedRef[0]) return;
+    gameOverSoundPlayedRef[1](true);
+    const { isCheckmate, isDraw, isStalemate, turn } = coach.snapshot ?? {};
+    // Single source of truth for who won — see lib/game-verdict.ts. Returns
+    // null when the outcome is not determinable, in which case we stay silent
+    // rather than announce a guess.
+    const verdict = gameOverVerdict({
+      isGameOver: true,
+      isCheckmate,
+      isDraw,
+      isStalemate,
+      turn,
+      playerColor: "w",
+    });
+    if (verdict === "victory") setTimeout(() => playVictorySound(), 200);
+    else if (verdict === "defeat") setTimeout(() => playDefeatSound(), 200);
+    else if (verdict === "draw") setTimeout(() => playDrawSound(), 200);
+  }, [coach.isGameOver, coach.snapshot, gameOverDismissed, gameOverSoundPlayedRef]);
+
+  // Reset sound-played flag on new game
+  useEffect(() => {
+    if (!coach.isGameOver) gameOverSoundPlayedRef[1](false);
+  }, [coach.isGameOver, gameOverSoundPlayedRef]);
+
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [isHoldingJ, setIsHoldingJ] = useState(false);
+
+  useA11yFeedback(coach.status, coach.caption, {
+    soundCues: settings.soundCues,
+    announceCaptions: settings.announceCaptions,
+  });
+
+  useHotkeys(
+    {
+      j: {
+        onDown: () => {
+          setIsHoldingJ(true);
+          coach.startListening();
+        },
+        onUp: () => {
+          setIsHoldingJ(false);
+          coach.stopListening();
+        },
+      },
+      escape: () => {
+        setIsHoldingJ(false);
+        coach.cancelListening();
+      },
+      r: () => coach.repeatLast(),
+      d: () => coach.describeBoard("full"),
+      t: () => coach.describeBoard("threats"),
+      g: () => coach.describeBoard("tactical"),
+      u: () => coach.undoMove(),
+      b: () => toggleBoardVisible(),
+      c: () => toggleHighContrast(),
+      "?": () => setShortcutsOpen((v) => !v),
+      "+": () => cycleFontScale(1),
+      "=": () => cycleFontScale(1),
+      "-": () => cycleFontScale(-1),
+    },
+    !shortcutsOpen,
+  );
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden">
+      <a href="#main-content" className="skip-link">
+        Skip to voice controls
+      </a>
+
+      {/* ── Slim header ── */}
+      <header className="flex-shrink-0 border-b border-border px-4 py-2.5 backdrop-blur-md bg-bg/80 z-30">
+        <div className="mx-auto flex max-w-screen-2xl items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0 shrink-0">
+            <h1 className="font-display text-lg font-semibold tracking-tight whitespace-nowrap">♔ VoiceChessmate</h1>
+            <p className="hidden sm:block text-xs text-fg-muted whitespace-nowrap">Hold J to speak</p>
+          </div>
+
+          {/* Settings toolbar — fills remaining width */}
+          <div className="flex-1 min-w-0">
+            <SettingsToolbar
+              settings={settings}
+              onToggleHighContrast={toggleHighContrast}
+              onToggleSoundCues={toggleSoundCues}
+              onToggleAnnounceCaptions={toggleAnnounceCaptions}
+              onCycleFontScale={cycleFontScale}
+              onOpenShortcuts={() => setShortcutsOpen(true)}
+              difficulty={coach.difficulty}
+              onSelectDifficulty={coach.setDifficulty}
+              onSetTheme={setTheme}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={coach.resetGame}
+            className="rounded-full border border-border bg-bg-raised px-3 py-1 text-xs font-semibold text-fg-muted hover:border-accent hover:text-accent transition-colors active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
+          >
+            New Game
+          </button>
+        </div>
+      </header>
+
+      {/*
+        Left: scrollable panel for voice controls + transcript
+        Right: fixed, non-scrollable — board sized to perfectly fill remaining height
+      */}
+      <main
+        id="main-content"
+        className="flex-1 overflow-y-auto lg:overflow-hidden mx-auto w-full max-w-screen-2xl flex flex-col lg:flex-row min-h-0"
+      >
+        {/* ── Left: scrollable voice + transcript ── */}
+        <div className="flex flex-col gap-3 px-3 pt-3 pb-8 lg:px-4 lg:pt-4 lg:pb-8 w-full lg:w-[400px] xl:w-[440px] shrink-0 lg:border-r lg:border-border overflow-y-auto min-h-0 h-full max-h-full overscroll-contain">
+          {!coach.isVoiceSupported && (
+            <p role="alert" className="panel w-full border-danger p-3 text-sm flex-shrink-0">
+              Voice input isn&apos;t available in this browser. Use the text box below.
+            </p>
+          )}
+
+          <ListenButton
+            status={coach.status}
+            isHolding={isHoldingJ}
+            onPress={coach.pressTalk}
+            onStartHold={() => {
+              setIsHoldingJ(true);
+              coach.startListening();
+            }}
+            onEndHold={() => {
+              setIsHoldingJ(false);
+              coach.stopListening();
+            }}
+            onCancel={coach.cancelListening}
+            onRepeat={coach.repeatLast}
+          />
+          <CaptionBar
+            caption={coach.caption}
+            partialText={coach.partialText}
+            status={coach.status}
+            onRepeat={coach.repeatLast}
+          />
+          <TextFallbackForm onSubmit={coach.submitTextFallback} emphasized={!coach.isVoiceSupported} />
+          <TranscriptLog entries={coach.entries} />
+        </div>
+
+        {/* ── Right: fixed height, no scroll — board fits perfectly ── */}
+        <div className="flex-1 overflow-hidden flex flex-col items-center justify-center p-2 sm:p-3 lg:p-3 min-h-0 h-full">
+          {/* This wrapper constrains the board to the available column height */}
+          <div className="w-full h-full flex flex-col items-center justify-center max-w-[620px] min-h-0">
+            <ChessBoardPanel
+              fen={coach.fen}
+              moveHistory={coach.moveHistory}
+              onManualMove={coach.attemptManualMove}
+              visible={settings.boardVisible}
+              onToggleVisible={toggleBoardVisible}
+              isOpponentThinking={coach.status === "thinking"}
+              isGameOver={coach.isGameOver}
+              clock={coach.clock}
+              difficulty={coach.difficulty}
+              onSelectDifficulty={coach.setDifficulty}
+            />
+          </div>
+          <p className="flex-shrink-0 mt-1 text-[11px] text-fg-muted text-center">
+            Press <span className="font-mono">?</span> for keyboard shortcuts
+          </p>
+        </div>
+      </main>
+
+      {/* Game over modal */}
+      {coach.isGameOver && !gameOverDismissed && (
+        <GameOverModal
+          isGameOver={coach.isGameOver}
+          isCheckmate={coach.snapshot?.isCheckmate ?? false}
+          isDraw={coach.snapshot?.isDraw ?? false}
+          isStalemate={coach.snapshot?.isStalemate ?? false}
+          turn={coach.turn}
+          moveNumber={Math.floor(coach.moveHistory.length / 2) + 1}
+          pgn={coach.snapshot?.pgn ?? ""}
+          onNewGame={() => {
+            setGameOverDismissed(false);
+            coach.resetGame();
+          }}
+          onClose={() => setGameOverDismissed(true)}
+        />
+      )}
+
+      {shortcutsOpen && <ShortcutsModal onClose={() => setShortcutsOpen(false)} />}
+    </div>
+  );
+}
