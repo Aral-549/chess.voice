@@ -6,7 +6,7 @@
 import { Chess, Square, Move, Color, PieceSymbol } from 'chess.js';
 import type { GameState, MoveResult, ResolvedMove, BoardDescription, Difficulty } from '@/types';
 
-const PIECE_NAMES: Record<PieceSymbol, string> = {
+export const PIECE_NAMES: Record<PieceSymbol, string> = {
   p: 'pawn',
   n: 'knight',
   b: 'bishop',

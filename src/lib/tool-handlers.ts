@@ -6,7 +6,11 @@
 // description instead of parsing strings. Much more robust.
 // ============================================================
 
+import { Chess } from 'chess.js';
 import { ChessEngine, squareToIBCA } from './chess-engine';
+import { analyseMove } from './move-analysis';
+import { LIBRARY, findGame, describeLibrary, introduce, type LibraryGame } from './game-library';
+import { turnDetectionFor, policyFor, type PlayMode } from './play-modes';
 import type {
   GetBoardStateArgs,
   GetLegalMovesArgs,
@@ -237,6 +241,59 @@ export const CHESS_TOOLS: ToolDefinition[] = [
         },
       },
       required: ['setting'],
+    },
+  },
+  {
+    type: 'function',
+    name: 'explain_last_move',
+    description:
+      "Explain the quality of the most recent move using the engine's real evaluation. " +
+      'Use when the player asks why a move was bad, what they missed, or how they should have played. ' +
+      "Set whose to 'opponent' when they ask about the coach's move instead of their own.",
+    parameters: {
+      type: 'object',
+      properties: {
+        whose: { type: 'string', description: 'Whose move to explain.', enum: ['mine', 'opponent'] },
+      },
+    },
+  },
+  {
+    type: 'function',
+    name: 'set_play_mode',
+    description:
+      'Switch play mode. blindfold hides the board and scores how well the player tracks the ' +
+      'position in their head. handsfree listens continuously so no key is needed, and confirms ' +
+      'every move before playing it. normal is push-to-talk with the board available.',
+    parameters: {
+      type: 'object',
+      properties: {
+        mode: { type: 'string', description: 'The play mode to switch to.', enum: ['normal', 'blindfold', 'handsfree'] },
+      },
+      required: ['mode'],
+    },
+  },
+  {
+    type: 'function',
+    name: 'replay_game',
+    description:
+      'Load a famous game and narrate it move by move. Use when the player asks to hear or replay ' +
+      'a named game. Call with no name to list what is available.',
+    parameters: {
+      type: 'object',
+      properties: {
+        game_name: { type: 'string', description: 'What the player called the game.' },
+      },
+    },
+  },
+  {
+    type: 'function',
+    name: 'replay_step',
+    description: 'Step through a loaded replay one move at a time.',
+    parameters: {
+      type: 'object',
+      properties: {
+        direction: { type: 'string', description: 'Step forwards or backwards.', enum: ['next', 'previous'] },
+      },
     },
   },
   {
@@ -535,6 +592,16 @@ export const CONFIRM_MIN_CONFIDENCE = 0.6;
  *  legal moves and score identically. Only asking, or typing, catches that.
  *  Off by default because it costs a word per move; on for games that matter. */
 let confirmEverySpokenMove = false;
+
+// --- Play mode and replay state -------------------------------------------
+// Module-level, matching how currentDifficulty and confirmEverySpokenMove are
+// already held. The UI mirrors these; the engine does not own them.
+let currentMode: PlayMode = 'normal';
+let replay: { game: LibraryGame; moves: string[]; cursor: number } | null = null;
+
+export function getPlayMode(): PlayMode {
+  return currentMode;
+}
 
 export function setConfirmEverySpokenMove(on: boolean): void {
   confirmEverySpokenMove = on;
@@ -1146,6 +1213,149 @@ export function handleToolCall(
         enable,
         narration: `Updated ${setting.replace('_', ' ')} setting.`,
         fen: engine.getGameState().fen,
+      });
+    }
+
+    case 'explain_last_move': {
+      const state = engine.getGameState();
+      const last = state.lastMove as unknown as
+        { san: string; before?: string } | null;
+
+      // Contract case 8: nothing to analyse is not an error.
+      if (!last || !last.before) {
+        const narration = 'No moves have been played yet, so there is nothing to look at.';
+        return JSON.stringify({ success: false, narration, fen: state.fen });
+      }
+
+      const analysis = analyseMove(last.before, last.san);
+      if (!analysis) {
+        const narration = "I couldn't analyse that move.";
+        return JSON.stringify({ success: false, narration, fen: state.fen });
+      }
+
+      return JSON.stringify({
+        success: true,
+        narration: analysis.spoken,
+        classification: analysis.classification,
+        centipawn_loss: analysis.centipawnLoss,
+        better_move: analysis.bestMove,
+        forced: analysis.forced,
+        fen: state.fen,
+      });
+    }
+
+    case 'set_play_mode': {
+      const requested = String(args.mode ?? 'normal') as PlayMode;
+      if (!['normal', 'blindfold', 'handsfree'].includes(requested)) {
+        return JSON.stringify({ success: false, narration: 'I do not know that mode.' });
+      }
+
+      const previous = currentMode;
+      currentMode = requested;
+
+      // Case 25: continuous listening means the microphone decided to send
+      // something, not the player. Every move gets confirmed for the duration.
+      confirmEverySpokenMove = policyFor(currentMode).requireConfirmation;
+
+      const narration =
+        currentMode === 'blindfold'
+          ? 'Blindfold mode on. The board is hidden and stays hidden. Ask me to describe the position any time — it counts as an assist.'
+          : currentMode === 'handsfree'
+            ? 'Hands-free mode on. I am listening continuously, and I will confirm every move before playing it.'
+            : 'Back to normal mode. Hold J to speak.';
+
+      return JSON.stringify({
+        success: true,
+        narration,
+        modeAction: 'set',
+        mode: currentMode,
+        previousMode: previous,
+        turnDetection: turnDetectionFor(currentMode),
+        boardHidden: currentMode === 'blindfold',
+        fen: engine.getGameState().fen,
+      });
+    }
+
+    case 'replay_game': {
+      const requested = String(args.game_name ?? '').trim();
+      const found = requested ? findGame(requested) : null;
+
+      // Case 19: offer what exists rather than loading the nearest thing.
+      if (!found) {
+        return JSON.stringify({
+          success: false,
+          narration: requested
+            ? `I don't have that one. ${describeLibrary()}`
+            : describeLibrary(),
+          availableGames: LIBRARY.map((g) => g.title),
+        });
+      }
+
+      // Load once to both validate the PGN and get the move list. A game that
+      // will not parse is never presented under a famous name.
+      const probe = new Chess();
+      try {
+        probe.loadPgn(found.pgn);
+      } catch {
+        return JSON.stringify({ success: false, narration: 'That game failed to load.' });
+      }
+      const moves = probe.history();
+      if (moves.length === 0) {
+        return JSON.stringify({ success: false, narration: 'That game failed to load.' });
+      }
+
+      replay = { game: found, moves, cursor: 0 };
+
+      return JSON.stringify({
+        success: true,
+        narration: `${introduce(found)} Say next to hear each move.`,
+        replayAction: 'load',
+        gameId: found.id,
+        totalMoves: moves.length,
+        pgn: found.pgn,
+      });
+    }
+
+    case 'replay_step': {
+      if (!replay) {
+        return JSON.stringify({
+          success: false,
+          narration: `No game is loaded. ${describeLibrary()}`,
+        });
+      }
+
+      const back = String(args.direction ?? 'next') === 'previous';
+      const next = back ? replay.cursor - 1 : replay.cursor + 1;
+
+      if (next < 0) {
+        return JSON.stringify({ success: false, narration: 'That is the start of the game.' });
+      }
+      if (next > replay.moves.length) {
+        return JSON.stringify({
+          success: false,
+          narration: `That is the end. ${replay.game.white} won as White.`,
+        });
+      }
+
+      replay.cursor = next;
+      const board = new Chess();
+      for (const san of replay.moves.slice(0, replay.cursor)) board.move(san);
+
+      const played = replay.moves[replay.cursor - 1] ?? null;
+      const atEnd = replay.cursor === replay.moves.length;
+
+      return JSON.stringify({
+        success: true,
+        narration: played
+          ? `${Math.ceil(replay.cursor / 2)}${replay.cursor % 2 === 1 ? '.' : '...'} ` +
+            `${replay.cursor % 2 === 1 ? 'White' : 'Black'} plays ${played}.${
+              atEnd ? ` That's checkmate. ${replay.game.white} wins.` : ''
+            }`
+          : 'Back to the starting position.',
+        replayAction: 'step',
+        ply: replay.cursor,
+        totalMoves: replay.moves.length,
+        fen: board.fen(),
       });
     }
 

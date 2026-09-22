@@ -43,6 +43,9 @@ type GameSnapshot = {
 export interface VoiceChessCoachOptions {
   speechRate?: number;
   onBoardAction?: (action: "flip" | "show" | "hide") => void;
+  /** Play mode changed by voice. `boardHidden` is authoritative: blindfold
+   *  hides the board and the UI must also lock the reveal control. */
+  onModeAction?: (mode: "normal" | "blindfold" | "handsfree", boardHidden: boolean) => void;
   onSettingsAction?: (setting: "high_contrast" | "sound_cues" | "announce_captions", enable?: boolean) => void;
 }
 
@@ -300,6 +303,14 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
       // 3. Board actions
       if (parsed.boardAction && options?.onBoardAction) {
         options.onBoardAction(parsed.boardAction as "flip" | "show" | "hide");
+      }
+
+      // 3b. Play mode (blindfold / hands-free)
+      if (parsed.modeAction === "set" && options?.onModeAction) {
+        options.onModeAction(
+          parsed.mode as "normal" | "blindfold" | "handsfree",
+          Boolean(parsed.boardHidden),
+        );
       }
 
       // 4. Settings actions

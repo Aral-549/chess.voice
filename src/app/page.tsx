@@ -14,6 +14,7 @@ import { SettingsToolbar } from "@/components/a11y/SettingsToolbar";
 import { ShortcutsModal } from "@/components/a11y/ShortcutsModal";
 import { GameOverModal } from "@/components/a11y/GameOverModal";
 import { AccountPanel } from "@/components/account/AccountPanel";
+import { announce } from "@/lib/announce";
 import { useGamePersistence } from "@/hooks/useGamePersistence";
 import { gameOverVerdict } from "@/lib/game-verdict";
 import {
@@ -33,6 +34,13 @@ export default function Home() {
       if (action === "show" && !settings.boardVisible) toggleBoardVisible();
       else if (action === "hide" && settings.boardVisible) toggleBoardVisible();
     },
+    onModeAction: (mode, boardHidden) => {
+      setPlayMode(mode);
+      // Blindfold hides the board; leaving it re-reveals it. The reveal
+      // control itself is locked while blindfold is on — see SettingsToolbar.
+      if (boardHidden && settings.boardVisible) toggleBoardVisible();
+      if (!boardHidden && !settings.boardVisible && mode === "normal") toggleBoardVisible();
+    },
     onSettingsAction: (setting) => {
       if (setting === "high_contrast") toggleHighContrast();
       else if (setting === "sound_cues") toggleSoundCues();
@@ -42,6 +50,7 @@ export default function Home() {
 
   // BUG 1 fix: track whether the game-over modal was dismissed for this game
   const [gameOverDismissed, setGameOverDismissed] = useState(false);
+  const [playMode, setPlayMode] = useState<"normal" | "blindfold" | "handsfree">("normal");
   // Reset dismissal when a new game starts (isGameOver goes false).
   // Adjusted during render rather than in an effect: an effect would commit a
   // first paint still showing the stale dismissal, then immediately re-render.
@@ -94,6 +103,21 @@ export default function Home() {
       coach.resumeFromPgn(resume.pgn, resume.difficulty);
     },
   });
+
+  // Contract case 12: peeking is allowed, pretending you did not is not. If the
+  // board becomes visible while blindfold is on, the attempt ends and says so,
+  // rather than the control being silently disabled.
+  const [prevBoardVisible, setPrevBoardVisible] = useState(settings.boardVisible);
+  if (prevBoardVisible !== settings.boardVisible) {
+    setPrevBoardVisible(settings.boardVisible);
+    if (settings.boardVisible && playMode === "blindfold") {
+      setPlayMode("normal");
+      announce(
+        "You revealed the board, so this blindfold attempt is unranked. The game continues.",
+        "polite",
+      );
+    }
+  }
 
   // Play win/loss/draw sound when game ends (only once per game)
   const gameOverSoundPlayedRef = useState(false);
@@ -192,6 +216,14 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {playMode !== "normal" && (
+              <span
+                role="status"
+                className="rounded-full border border-accent/50 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent whitespace-nowrap"
+              >
+                {playMode === "blindfold" ? "Blindfold" : "Hands-free"}
+              </span>
+            )}
             <AccountPanel />
             <button
               type="button"
