@@ -10,7 +10,7 @@ import { CaptionBar } from "@/components/voice/CaptionBar";
 import { TranscriptLog } from "@/components/voice/TranscriptLog";
 import { TextFallbackForm } from "@/components/voice/TextFallbackForm";
 import { ChessBoardPanel } from "@/components/board/ChessBoardPanel";
-import { SettingsToolbar } from "@/components/a11y/SettingsToolbar";
+import { SettingsMenu } from "@/components/a11y/SettingsMenu";
 import { ShortcutsModal } from "@/components/a11y/ShortcutsModal";
 import { GameOverModal } from "@/components/a11y/GameOverModal";
 import { AccountPanel } from "@/components/account/AccountPanel";
@@ -38,7 +38,7 @@ export default function Home() {
     onModeAction: (mode, boardHidden) => {
       setPlayMode(mode);
       // Blindfold hides the board; leaving it re-reveals it. The reveal
-      // control itself is locked while blindfold is on — see SettingsToolbar.
+      // control itself stays available — revealing ends the attempt.
       if (boardHidden && settings.boardVisible) toggleBoardVisible();
       if (!boardHidden && !settings.boardVisible && mode === "normal") toggleBoardVisible();
     },
@@ -184,6 +184,17 @@ export default function Home() {
       u: () => coach.undoMove(),
       b: () => toggleBoardVisible(),
       c: () => toggleHighContrast(),
+      // S opens the settings menu, which now holds difficulty, time control,
+      // play mode and themes. The menu traps focus and returns it on Escape,
+      // so this is a complete keyboard route to every setting.
+      s: () => setSettingsOpen((v) => !v),
+      // Time control, which lost its always-visible pills. Shift is not
+      // required: 1-4 are difficulty, 5-9 are the clock.
+      "5": () => coach.clock?.setTimeControl("casual"),
+      "6": () => coach.clock?.setTimeControl("bullet_1_0"),
+      "7": () => coach.clock?.setTimeControl("blitz_3_0"),
+      "8": () => coach.clock?.setTimeControl("blitz_5_0"),
+      "9": () => coach.clock?.setTimeControl("rapid_10_0"),
       "?": () => setShortcutsOpen((v) => !v),
       "+": () => cycleFontScale(1),
       "=": () => cycleFontScale(1),
@@ -225,50 +236,29 @@ export default function Home() {
             )}
           </div>
 
-          {/* Settings toolbar. Once a game is underway this collapses behind a
-              toggle: it is a wall of controls competing with the board, and
-              every one of them already has a keyboard shortcut, so nothing
-              becomes unreachable by hiding it. */}
-          {inPlay && !settingsOpen ? (
-            <div className="flex-1 min-w-0 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                aria-expanded={false}
-                className="rounded-lg border border-border px-3 py-1 text-xs font-medium text-fg-muted hover:text-fg hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-              >
-                Settings
-              </button>
-            </div>
-          ) : (
-          <div className="flex-1 min-w-0">
-            {inPlay && (
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(false)}
-                aria-expanded
-                className="mb-1 rounded-lg border border-border px-2 py-0.5 text-[11px] text-fg-muted hover:text-fg focus-visible:outline focus-visible:outline-2"
-              >
-                Hide settings
-              </button>
-            )}
-            <SettingsToolbar
+          {/* Everything that used to live across the header and above the
+              board is in one menu now. Nothing here is needed mid-move, and
+              every option keeps its single-key shortcut. */}
+          <div className="flex-1" />
+
+          <div className="flex items-center gap-2 shrink-0">
+            <SettingsMenu
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
               settings={settings}
               onToggleHighContrast={toggleHighContrast}
               onToggleSoundCues={toggleSoundCues}
               onToggleAnnounceCaptions={toggleAnnounceCaptions}
               onCycleFontScale={cycleFontScale}
-              onOpenShortcuts={() => setShortcutsOpen(true)}
+              onSetTheme={setTheme}
               difficulty={coach.difficulty}
               onSelectDifficulty={coach.setDifficulty}
+              timeControl={coach.clock?.mode}
+              onSelectTimeControl={(mode) => coach.clock?.setTimeControl(mode)}
               playMode={playMode}
               onSelectPlayMode={(mode) => coach.changePlayMode(mode)}
-              onSetTheme={setTheme}
+              onOpenShortcuts={() => setShortcutsOpen(true)}
             />
-          </div>
-          )}
-
-          <div className="flex items-center gap-2 shrink-0">
             {playMode !== "normal" && (
               <span
                 role="status"
@@ -354,7 +344,6 @@ export default function Home() {
               isGameOver={coach.isGameOver}
               clock={coach.clock}
               difficulty={coach.difficulty}
-              onSelectDifficulty={coach.setDifficulty}
             />
           </div>
           <p className="flex-shrink-0 mt-1 text-[11px] text-fg-muted text-center">

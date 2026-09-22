@@ -190,7 +190,7 @@ export function AccountPanel() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls="account-panel"
-        className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         {signedIn
           ? profile
@@ -202,7 +202,7 @@ export function AccountPanel() {
       {open && (
         <div
           id="account-panel"
-          className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-border bg-surface p-4 shadow-xl"
+          className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-border bg-bg-raised p-4 shadow-xl"
         >
           {signedIn ? (
             <div className="space-y-3">
@@ -226,7 +226,7 @@ export function AccountPanel() {
               <button
                 type="button"
                 onClick={signOut}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm hover:bg-surface-2 focus-visible:outline focus-visible:outline-2"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm hover:bg-bg-raised focus-visible:outline focus-visible:outline-2"
               >
                 Sign out
               </button>

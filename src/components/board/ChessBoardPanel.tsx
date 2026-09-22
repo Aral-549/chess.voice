@@ -6,6 +6,8 @@ import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 import type { TimeControlMode } from "@/hooks/useChessClock";
+import { PlayerRail } from "./PlayerRail";
+import { capturedFromFen } from "@/lib/captured";
 import type { Difficulty } from "@/types";
 
 export interface ChessClockState {
@@ -34,7 +36,6 @@ interface ChessBoardPanelProps {
   isGameOver?: boolean;
   clock?: ChessClockState;
   difficulty?: Difficulty;
-  onSelectDifficulty?: (d: Difficulty) => void;
 }
 
 /**
@@ -60,7 +61,6 @@ export function ChessBoardPanel({
   isGameOver = false,
   clock,
   difficulty = "intermediate",
-  onSelectDifficulty,
 }: ChessBoardPanelProps) {
   const [flipped, setFlipped] = useState(false);
 
@@ -69,6 +69,10 @@ export function ChessBoardPanel({
     const parts = fen.split(" ");
     return parts.length > 1 ? parts[1] === "w" : true;
   }, [fen]);
+
+  // Derived from the FEN so it cannot drift from the board across resume,
+  // undo or replay.
+  const captured = useMemo(() => capturedFromFen(fen), [fen]);
 
   const lastMoveSquares = useMemo(() => {
     if (moveHistory.length === 0) return {};
@@ -136,64 +140,6 @@ export function ChessBoardPanel({
 
       {visible ? (
         <div className="flex flex-col items-center gap-1.5 sm:gap-2 w-full flex-1 min-h-0 justify-center">
-          {/* Apple Mode & Bot Mastery Pill Selectors */}
-          <div className="flex flex-wrap items-center justify-between gap-1 w-full max-w-[min(100%,calc(100vh-320px),420px)] xl:max-w-[min(100%,calc(100vh-320px),460px)] shrink-0">
-            {/* Blitz / Time Control Modes */}
-            <div className="flex items-center gap-1 bg-bg/60 p-1 rounded-full border border-border/60 backdrop-blur-md overflow-x-auto scrollbar-none shadow-xs">
-              {(
-                [
-                  { id: "casual", label: "Casual" },
-                  { id: "bullet_1_0", label: "1m" },
-                  { id: "blitz_3_0", label: "3m" },
-                  { id: "blitz_5_0", label: "5m" },
-                  { id: "rapid_10_0", label: "10m" },
-                ] as const
-              ).map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => clock?.setTimeControl(m.id)}
-                  title={`Set timer to ${m.label}`}
-                  className={cn(
-                    "px-2.5 py-0.5 sm:py-1 rounded-full font-mono text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer",
-                    clock?.mode === m.id
-                      ? "bg-accent text-bg shadow-xs"
-                      : "text-fg-muted hover:text-fg hover:bg-bg-raised/60",
-                  )}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Bot Mastery Levels */}
-            <div className="flex items-center gap-1 bg-bg/60 p-1 rounded-full border border-border/60 backdrop-blur-md shadow-xs">
-              {(
-                [
-                  { id: "beginner", label: "Beginner" },
-                  { id: "intermediate", label: "Inter" },
-                  { id: "advanced", label: "Adv" },
-                  { id: "master", label: "Master" },
-                ] as const
-              ).map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => onSelectDifficulty?.(d.id)}
-                  title={`Bot difficulty: ${d.label}`}
-                  className={cn(
-                    "px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] transition-all cursor-pointer",
-                    difficulty === d.id
-                      ? "bg-accent-2/90 text-bg font-semibold shadow-xs"
-                      : "text-fg-muted hover:text-fg hover:bg-bg-raised/60",
-                  )}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Flag fell alert banner */}
           {clock?.flagFell && (
             <div
@@ -204,63 +150,31 @@ export function ChessBoardPanel({
             </div>
           )}
 
-          {/* Apple-style Top Player Bar (Black / Coach) */}
-          <div className="flex w-full max-w-[min(100%,calc(100vh-320px),420px)] xl:max-w-[min(100%,calc(100vh-320px),460px)] items-center justify-between rounded-xl border border-border/60 bg-bg/40 px-2.5 sm:px-3 py-1 sm:py-1.5 backdrop-blur-md shadow-xs gap-2 min-w-0 shrink-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-stone-900 border border-stone-700 text-stone-100 shadow-sm text-xs sm:text-sm font-bold">
-                ♚
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-xs text-fg truncate">
-                    Voice Coach
-                  </span>
-                  <span className="shrink-0 rounded border border-border bg-bg-raised px-1 py-0.2 font-mono text-[9px] text-fg-muted uppercase">
-                    {difficulty}
-                  </span>
-                </div>
-                <span className="text-[10px] text-fg-muted block truncate">Black Pieces</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* Coach Digital Clock LED */}
-              {clock && clock.mode !== "casual" && (
-                <div
-                  className={cn(
-                    "font-mono text-xs px-2 py-0.5 rounded-md border font-bold tracking-wider transition-all",
-                    !isWhiteTurn && clock.isRunning
-                      ? clock.isUrgentBlack
-                        ? "bg-rose-500/20 text-rose-400 border-rose-500/60 animate-pulse"
-                        : clock.isLowTimeBlack
-                        ? "bg-amber-500/20 text-amber-400 border-amber-500/60"
-                        : "bg-accent/15 text-accent border-accent/40"
-                      : "bg-bg-raised/40 text-fg-muted border-border/40",
-                  )}
-                >
-                  {clock.blackFormatted}
-                </div>
-              )}
-
-              {/* Coach Turn Status Pill */}
-              {!isWhiteTurn ? (
-                <div className="shrink-0 flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent animate-pulse">
-                  <span className="h-1.5 w-1.5 rounded-full bg-accent animate-ping" />
-                  <span>{isOpponentThinking ? "Thinking…" : "Playing"}</span>
-                </div>
-              ) : (
-                <span className="shrink-0 text-[10px] text-fg-muted/70">Waiting</span>
-              )}
-            </div>
-          </div>
-
           {/* The board is the product. Removing the window chrome above bought
               back vertical space, so the reserve drops from 330px to 250px and
               the hard caps rise — on a 1080p screen this is roughly a 40%
               larger board. The frame is one hairline now; the stacked
               gradient, inset shadow and blur were reading as a bezel around
               the board rather than as part of it. */}
-          <div className="relative flex w-full max-w-[min(100%,calc(100vh-250px),560px)] xl:max-w-[min(100%,calc(100vh-250px),640px)] items-center justify-center p-1 rounded-lg border border-border/50 bg-bg-raised/40 shrink-0">
+          {/* Board flanked by its two rails. The space either side of a square
+              board was empty; the clocks and captured material now live there
+              instead of stacked above and below, where they were eating the
+              height the board wanted. Below `lg` the rails wrap under it. */}
+          <div className="flex w-full flex-col items-center justify-center gap-2 lg:flex-row lg:items-stretch lg:gap-3 min-h-0">
+            <PlayerRail
+              side="black"
+              name="Voice Coach"
+              subtitle={`Black · ${difficulty ?? "intermediate"}`}
+              captured={captured.byBlack}
+              advantage={-captured.materialAdvantage}
+              clock={clock && clock.mode !== "casual" ? clock.blackFormatted : null}
+              isTurn={!isWhiteTurn}
+              isLowTime={clock?.isLowTimeBlack}
+              isUrgent={clock?.isUrgentBlack}
+              thinking={isOpponentThinking}
+            />
+
+            <div className="relative flex w-full max-w-[min(100%,calc(100vh-250px),560px)] xl:max-w-[min(100%,calc(100vh-250px),640px)] items-center justify-center p-1 rounded-lg border border-border/50 bg-bg-raised/40 shrink-0 self-center">
             {/* Game over overlay — dims board and shows result */}
             {isGameOver && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl sm:rounded-2xl bg-black/50 backdrop-blur-sm pointer-events-none">
@@ -288,57 +202,22 @@ export function ChessBoardPanel({
                 }}
               />
             </div>
-          </div>
-
-          {/* Apple-style Bottom Player Bar (White / You) */}
-          <div className="flex w-full max-w-[min(100%,calc(100vh-320px),420px)] xl:max-w-[min(100%,calc(100vh-320px),460px)] items-center justify-between rounded-xl border border-border/60 bg-bg/40 px-2.5 sm:px-3 py-1 sm:py-1.5 backdrop-blur-md shadow-xs gap-2 min-w-0 shrink-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 border border-stone-300 text-stone-900 shadow-sm text-xs sm:text-sm font-bold">
-                ♔
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-xs text-fg truncate">You</span>
-                  <span className="shrink-0 rounded border border-border bg-bg-raised px-1 py-0.2 font-mono text-[9px] text-fg-muted">
-                    Player
-                  </span>
-                </div>
-                <span className="text-[10px] text-fg-muted block truncate">White Pieces</span>
-              </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* Player Digital Clock LED */}
-              {clock && clock.mode !== "casual" && (
-                <div
-                  className={cn(
-                    "font-mono text-xs px-2 py-0.5 rounded-md border font-bold tracking-wider transition-all",
-                    isWhiteTurn && clock.isRunning
-                      ? clock.isUrgentWhite
-                        ? "bg-rose-500/20 text-rose-400 border-rose-500/60 animate-pulse"
-                        : clock.isLowTimeWhite
-                        ? "bg-amber-500/20 text-amber-400 border-amber-500/60"
-                        : "bg-emerald-500/15 text-emerald-400 border-emerald-500/40"
-                      : "bg-bg-raised/40 text-fg-muted border-border/40",
-                  )}
-                >
-                  {clock.whiteFormatted}
-                </div>
-              )}
-
-              {/* Player Turn Status Pill */}
-              {isWhiteTurn ? (
-                <div className="shrink-0 flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-500">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Your Turn</span>
-                </div>
-              ) : (
-                <span className="shrink-0 text-[10px] text-fg-muted/70">Opponent Turn</span>
-              )}
-            </div>
+            <PlayerRail
+              side="white"
+              name="You"
+              subtitle="White pieces"
+              captured={captured.byWhite}
+              advantage={captured.materialAdvantage}
+              clock={clock && clock.mode !== "casual" ? clock.whiteFormatted : null}
+              isTurn={isWhiteTurn}
+              isLowTime={clock?.isLowTimeWhite}
+              isUrgent={clock?.isUrgentWhite}
+            />
           </div>
 
-          {/* Apple-styled Move History Drawer */}
+          {/* Move history */}
           <MoveHistoryList moveHistory={moveHistory} />
         </div>
       ) : (
