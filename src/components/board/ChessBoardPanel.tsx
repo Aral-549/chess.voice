@@ -178,7 +178,12 @@ export function ChessBoardPanel({
                 stretched to the *frame* and sat 5px proud of the first and
                 last ranks — the board's squares are what the eye aligns to,
                 so the wrapper has to be exactly the squares. */}
-            <div className="relative flex w-full max-w-[min(100%,calc(100vh-250px),560px)] xl:max-w-[min(100%,calc(100vh-250px),640px)] items-center justify-center shrink-0 self-center">
+            {/* flex-1 + min-w-0, not w-full: inside a flex row a percentage
+                max-width resolves against the whole row, so `100%` let the
+                board claim the full width and the rails overflowed the column
+                by 86px a side. Taking the remainder instead means the board
+                shrinks to make room for them. */}
+            <div className="relative flex flex-1 min-w-0 max-w-[min(calc(100vh-250px),560px)] xl:max-w-[min(calc(100vh-250px),640px)] items-center justify-center self-center">
             {/* Game over overlay — dims board and shows result */}
             {isGameOver && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl sm:rounded-2xl bg-black/50 backdrop-blur-sm pointer-events-none">

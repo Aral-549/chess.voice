@@ -368,7 +368,9 @@ export default function Home() {
         {/* ── Right: fixed height, no scroll — board fits perfectly ── */}
         <div className="flex-1 overflow-hidden flex flex-col items-center justify-center p-1.5 sm:p-2 min-h-0 h-full">
           {/* This wrapper constrains the board to the available column height */}
-          <div className="w-full h-full flex flex-col items-center justify-center max-w-[760px] xl:max-w-[860px] min-h-0">
+          {/* Wide enough for rail + board + rail (184 + 12 + 640 + 12 + 184). The
+              old 860px cap was narrower than its own contents. */}
+          <div className="w-full h-full flex flex-col items-center justify-center max-w-[1040px] xl:max-w-[1120px] min-h-0">
             <ChessBoardPanel
               fen={coach.fen}
               moveHistory={coach.moveHistory}
