@@ -15,6 +15,7 @@ import { ShortcutsModal } from "@/components/a11y/ShortcutsModal";
 import { GameOverModal } from "@/components/a11y/GameOverModal";
 import { AccountPanel } from "@/components/account/AccountPanel";
 import { cn } from "@/lib/utils";
+import { PanelSplitter } from "@/components/layout/PanelSplitter";
 import { announce } from "@/lib/announce";
 import { useGamePersistence } from "@/hooks/useGamePersistence";
 import { gameOverVerdict } from "@/lib/game-verdict";
@@ -53,6 +54,30 @@ export default function Home() {
   const [gameOverDismissed, setGameOverDismissed] = useState(false);
   const [playMode, setPlayMode] = useState<"normal" | "blindfold" | "handsfree">("normal");
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  /** Conversation column width. Read after mount, never during render, so the
+   *  server and first client render agree — see BUGLOG 2026-09-16. */
+  const [panelWidth, setPanelWidth] = useState(440);
+  useEffect(() => {
+    let saved = NaN;
+    try {
+      saved = Number(window.localStorage.getItem("vcm_panel_width"));
+    } catch {
+      /* private mode — the default is fine */
+    }
+    if (!Number.isFinite(saved) || saved < 320 || saved > 760) return;
+    // Same deliberate second render pass as useA11ySettings: reading storage
+    // during the first (server-matching) render would be a hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPanelWidth(saved);
+  }, []);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("vcm_panel_width", String(panelWidth));
+    } catch {
+      /* ignore */
+    }
+  }, [panelWidth]);
 
   /** A game is underway once a move exists. Drives the header collapse. */
   const inPlay = coach.moveHistory.length > 0;
@@ -181,6 +206,10 @@ export default function Home() {
       t: () => coach.describeBoard("threats"),
       g: () => coach.describeBoard("tactical"),
       w: () => coach.explainLastMove(),
+      // K for clock. Reads both clocks aloud and says whose move it is —
+      // the one piece of game state that changes without anything happening
+      // on the board, so it is the one you cannot infer from the last move.
+      k: () => coach.announceTime(),
       u: () => coach.undoMove(),
       b: () => toggleBoardVisible(),
       c: () => toggleHighContrast(),
@@ -296,7 +325,11 @@ export default function Home() {
             always reachable without hunting for it — which matters most for
             the people least able to hunt. The transcript owns the only
             scrollbar in this column. */}
-        <div className="flex flex-col gap-3 px-3 pt-3 pb-3 lg:px-4 lg:pt-4 lg:pb-4 w-full lg:w-[400px] xl:w-[440px] shrink-0 lg:border-r lg:border-border lg:overflow-hidden min-h-0 h-full max-h-full">
+        <div
+          className="flex flex-col gap-3 px-3 pt-3 pb-3 lg:px-4 lg:pt-4 lg:pb-4 w-full shrink-0 lg:overflow-hidden min-h-0 h-full max-h-full"
+          style={{ ["--panel-w" as string]: `${panelWidth}px` }}
+          data-panel
+        >
           {!coach.isVoiceSupported && (
             <p role="alert" className="panel w-full border-danger p-3 text-sm flex-shrink-0">
               Voice input isn&apos;t available in this browser. Use the text box below.
@@ -329,6 +362,8 @@ export default function Home() {
           </div>
           <TranscriptLog entries={coach.entries} />
         </div>
+
+        <PanelSplitter width={panelWidth} onWidthChange={setPanelWidth} />
 
         {/* ── Right: fixed height, no scroll — board fits perfectly ── */}
         <div className="flex-1 overflow-hidden flex flex-col items-center justify-center p-1.5 sm:p-2 min-h-0 h-full">

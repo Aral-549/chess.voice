@@ -18,6 +18,7 @@ import {
   resumeAudioContext,
 } from "@/lib/sound-effects";
 import { useChessClock, type TimeControlMode } from "@/hooks/useChessClock";
+import { spokenClock } from "@/lib/clock-speech";
 import type { Difficulty } from "@/types";
 
 export type TranscriptEntry = {
@@ -586,6 +587,22 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
     runTool("explain_last_move", {});
   }, [runTool]);
 
+  /**
+   * Speak the clock. The agent's control_timer "status" action returns
+   * "Checking time." and leaves the actual numbers to the UI, which is useless
+   * to someone who cannot see the UI — so this reads the clock state directly.
+   */
+  const announceTime = useCallback(() => {
+    if (!clock || clock.mode === "casual") {
+      speak("This game has no clock. It's untimed.");
+      return;
+    }
+    const yours = clock.whiteFormatted;
+    const theirs = clock.blackFormatted;
+    const turn = coach.getGameState().turn === "w" ? "Your move" : "Coach to move";
+    speak(`You have ${spokenClock(yours)}. The coach has ${spokenClock(theirs)}. ${turn}.`);
+  }, [clock, coach, speak]);
+
   /** Keyboard path for the play modes. */
   const changePlayMode = useCallback(
     (mode: "normal" | "blindfold" | "handsfree") => {
@@ -637,6 +654,7 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
     describeBoard,
     explainLastMove,
     changePlayMode,
+    announceTime,
     undoMove,
     resetGame,
     difficulty,

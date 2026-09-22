@@ -174,7 +174,11 @@ export function ChessBoardPanel({
               thinking={isOpponentThinking}
             />
 
-            <div className="relative flex w-full max-w-[min(100%,calc(100vh-250px),560px)] xl:max-w-[min(100%,calc(100vh-250px),640px)] items-center justify-center p-1 rounded-lg border border-border/50 bg-bg-raised/40 shrink-0 self-center">
+            {/* No padding or border on this wrapper. With them, the rails
+                stretched to the *frame* and sat 5px proud of the first and
+                last ranks — the board's squares are what the eye aligns to,
+                so the wrapper has to be exactly the squares. */}
+            <div className="relative flex w-full max-w-[min(100%,calc(100vh-250px),560px)] xl:max-w-[min(100%,calc(100vh-250px),640px)] items-center justify-center shrink-0 self-center">
             {/* Game over overlay — dims board and shows result */}
             {isGameOver && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl sm:rounded-2xl bg-black/50 backdrop-blur-sm pointer-events-none">
@@ -183,7 +187,7 @@ export function ChessBoardPanel({
                 </span>
               </div>
             )}
-            <div className="w-full aspect-square overflow-hidden rounded-lg sm:rounded-xl shadow-lg">
+            <div className="w-full aspect-square overflow-hidden rounded-lg border border-border/50">
               <Chessboard
                 options={{
                   position: fen,
