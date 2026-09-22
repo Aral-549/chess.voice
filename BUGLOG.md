@@ -8,6 +8,55 @@ Entries are newest first.
 
 ---
 
+## 2026-09-22 — Illegal SAN move played as a different piece
+
+- **Symptom:** Found while driving the running app to capture screenshots. The
+  move `Be2` was submitted while White was in check from a knight on f3. `Be2`
+  is illegal there — a knight check can only be answered by capturing the
+  knight or moving the king. Instead of refusing, the app moved the **king** to
+  e2 and reported *"White king to Eva 2."* The notation history recorded
+  `4. Ke2`. The player named a bishop.
+- **Root cause:** `fuzzyMatchMove` scores each legal move against the spoken
+  description. A mentioned destination square is worth +10, and there is an
+  existing −15 penalty for "a piece was named but this move is a different
+  piece" — but that check only consulted `PIECE_ALIASES`, which contains piece
+  *words* (`bishop`, `knight`, `horse`, `bish`…) and no SAN piece letters. So
+  in `Be2` the leading `B` carried no meaning at all: `Ke2` matched on the
+  destination square alone, scored +10, reached confidence 0.9 — exactly
+  `AUTOPLAY_MIN_CONFIDENCE` — and was played with no confirmation.
+
+  Compounding it, `normalizeIBCASpeech` lowercases its input, which is what
+  destroys the signal: case is the only thing distinguishing `Bxc3` (bishop
+  takes c3) from `bxc3` (b-file pawn takes c3).
+
+  Every `[KQRBN]<square>` input was affected, not just bishops: `Ne2`, `Re2`
+  and `Qe2` all resolved to `Ke2` in the same position.
+- **Stage/module:** `src/lib/tool-handlers.ts` → `fuzzyMatchMove` (move
+  parsing). The chess engine below it was never at fault — `ChessEngine.makeMove('Be2')`
+  correctly returned `success: false` and left the board untouched. The
+  substitution happened above it, in the parser that chooses *which* legal move
+  to hand the engine.
+- **Fix:** An explicit SAN piece letter is now read from the **raw**
+  description (before lowercasing) and treated as a constraint rather than a
+  hint. A legal move whose piece type differs is disqualified outright
+  (−100), so no combination of destination or capture bonuses can let a
+  different piece win the match. `Be2` in that position now falls to confidence
+  0.2, below `CONFIRM_MIN_CONFIDENCE`, and the app reads back the real legal
+  options instead of moving anything.
+- **Regression case added:** `src/lib/__tests__/san-piece-constraint.test.ts`
+  — 13 cases. Four piece letters against the check position, matcher-level
+  assertions that the king move never wins, and six cases pinning what must
+  keep working: legal SAN, lowercase `bxc3` as a pawn capture, spoken piece
+  names, IBCA phonetics, castling, and disambiguation when several pieces can
+  reach one square. **Verified: 7 of the 13 fail against the unfixed parser.**
+- **Status:** **verified**
+- **Note:** This is the failure mode the whole project is built to prevent, and
+  it survived 355 passing tests. It was found by playing the actual app, not by
+  reading code. Integration against real input is in the definition of done for
+  a reason.
+
+---
+
 ## 2026-09-22 — Defeat announced as victory
 
 - **Symptom:** When the player was checkmated, the app played the defeat sound

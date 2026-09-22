@@ -397,6 +397,19 @@ export function fuzzyMatchMove(description: string, engine: ChessEngine): { move
     targetPromotion = 'n';
   }
 
+  // --- Explicit SAN piece letter constrains which piece may move ---
+  // Read from the RAW description, not `s`: normalizeIBCASpeech lowercases,
+  // and case is the only thing separating "Bxc3" (bishop takes c3) from
+  // "bxc3" (b-file pawn takes c3).
+  //
+  // Without this, an illegal SAN move was silently rewritten to a different
+  // piece's move that happened to share the destination square — e.g. "Be2"
+  // while in check from a knight scored Ke2 at +10 on the destination alone,
+  // hit the 0.9 autoplay bar, and moved the KING. The player named a bishop.
+  // See BUGLOG 2026-09-22 "Illegal SAN move played as a different piece".
+  const sanPieceMatch = description.trim().match(/^([KQRBN])[a-h1-8]{0,2}x?[a-h][1-8]/);
+  const sanPieceType = sanPieceMatch ? sanPieceMatch[1].toLowerCase() : null;
+
   // --- Score every legal move against the description ---
   const scoredMoves: { move: typeof legalMoves[0]; score: number }[] = [];
 
@@ -467,6 +480,13 @@ export function fuzzyMatchMove(description: string, engine: ChessEngine): { move
     });
     if (namedPieces.length > 0 && !namedPieces.some(([, type]) => move.piece === type)) {
       score -= 15;
+    }
+
+    // An explicit SAN piece letter is not a hint, it is a constraint. Disqualify
+    // outright rather than penalise: no combination of destination/capture
+    // bonuses may ever let a different piece win this match.
+    if (sanPieceType && move.piece !== sanPieceType) {
+      score -= 100;
     }
 
     scoredMoves.push({ move, score });
