@@ -8,6 +8,70 @@ Entries are newest first.
 
 ---
 
+## 2026-09-22 — Token rate limiter did nothing in production
+
+- **Symptom:** No visible symptom, which is the point. `/api/token` appeared to
+  enforce 10 mints/minute per IP. In production it enforced almost nothing.
+- **Root cause:** The limiter kept its counters in a module-level `Map` inside a
+  serverless route handler. Vercel runs many lambda instances concurrently and
+  each gets its own module scope, so the real limit was *10 per minute per IP
+  **per instance***, with no bound on instance count. The `setInterval` cleanup
+  at module scope compounded it: serverless instances freeze and are reclaimed,
+  so it ran unpredictably and held a timer handle open.
+
+  Worse than the weak limit: every mint granted
+  `max_session_duration_seconds=3600`. One token bought an hour of paid agent
+  time, with nothing recording who took it. A public URL was an open tap on the
+  project's AssemblyAI credits.
+- **Stage/module:** `src/app/api/token/route.ts`.
+- **Fix:** Rewritten around a durable, attributable budget:
+  - Identity is a signed httpOnly device cookie (HMAC over a uuid) or a
+    Supabase account. A forged cookie cannot inherit another identity's budget.
+  - Budget lives in Postgres and is decremented inside `reserve_voice_seconds`
+    under a `SELECT … FOR UPDATE`, so two concurrent mints cannot both spend the
+    last of it.
+  - `max_session_duration_seconds` cut from 3600 to **600**, capping the blast
+    radius of a single leaked token at ten minutes.
+  - Mints reserve pessimistically and refund on a reported session end, so a
+    client that stays silent costs the user, never the operator.
+  - Every mint writes a `voice_ledger` row, so spend is attributable.
+  - The in-memory limiter survives only as an explicitly-labelled degraded
+    fallback for a database outage, at 6/min. Its comment says not to promote it
+    back to the primary path.
+- **Regression case added:** `src/lib/__tests__/quota-and-identity.test.ts` —
+  25 cases covering grant boundaries, window rollover, refund idempotency,
+  hostile durations, forged and stolen cookies, and account-over-device
+  precedence.
+- **Status:** **verified** for the policy layer. The route handler itself is
+  still covered only by manual exercise (see *Known gaps*).
+
+---
+
+## 2026-09-22 — Every token request returned 500 after minting
+
+- **Symptom:** `GET /api/token` returned 500 on every call. The stage log showed
+  `token.mint status:ok` immediately before the failure — so the upstream
+  AssemblyAI call had already succeeded and a real token had been spent.
+- **Root cause:** The new route used `NextResponse.next()` as a scratch object
+  to collect cookies from the Supabase SSR client before building the real
+  response. `NextResponse.next()` is middleware-only; in an App Route handler it
+  throws at runtime. Typecheck, lint and the whole unit suite passed — none of
+  them execute a route handler.
+- **Stage/module:** `src/app/api/token/route.ts`, and the same pattern in
+  `/api/games`, `/api/session/end`, `/api/auth/claim`, `/auth/callback`.
+- **Fix:** Introduced an explicit `CookieJar` (`src/lib/supabase/server.ts`):
+  the Supabase client pushes refreshed cookies into an array, and `applyCookies`
+  writes them onto the real response at the end. No scratch response exists.
+- **Regression case added:** NOT YET — see *Known gaps*. Found by running the
+  server and calling the endpoint, which is the only thing that would have
+  caught it.
+- **Status:** fixed, **not verified**
+- **Note:** the failure ordering is the lesson. The response was constructed
+  *after* the paid upstream call, so every 500 still cost a token. Side effects
+  that cost money belong after everything that can throw, not before.
+
+---
+
 ## 2026-09-22 — Illegal SAN move played as a different piece
 
 - **Symptom:** Found while driving the running app to capture screenshots. The
@@ -159,21 +223,30 @@ Entries are newest first.
 
 Tracked honestly rather than quietly closed.
 
-1. **The two 2026-09-22 entries above have no regression case.** Both live in
-   `src/app/api/token/route.ts`, a Next.js route handler. The suite runs in a
-   pure Node environment with no DOM and no HTTP harness, so exercising a
-   route handler needs test infrastructure that does not exist yet
-   (a `NextRequest` fixture and a fetch mock, at minimum). Standing that up is
-   its own change; per the contributing rules it does not belong in the same
-   pass as the fix. Until then both are **fixed, not verified**.
+1. **No route-handler tests exist.** Everything under `src/app/api/` is covered
+   only by its extracted pure logic (`lib/quota.ts`, `lib/identity.ts`,
+   `lib/elo.ts`, all well covered) plus manual exercise with `curl`. The suite
+   runs in a pure Node environment with no HTTP harness, so a handler test needs
+   a `NextRequest` fixture, a fetch mock and a Supabase double — infrastructure
+   that does not exist yet.
 
-   The cases to write, when that harness lands:
-   - 10 mints inside one window succeed; the 11th returns 429 with the
-     rate-limit message body.
-   - The window resets: after `RATE_LIMIT_WINDOW_MS`, minting succeeds again.
+   This gap is not theoretical: the `NextResponse.next()` bug above passed
+   typecheck, lint and 413 unit tests, and failed on the first real request.
+
+   The cases to write when that harness lands:
+   - A mint returns 200 with a `budget` block and sets a signed `vcm_device`
+     cookie; a second mint reuses it and sets none.
+   - The allowance is enforced: session N+1 past the budget returns 429
+     `quota_exhausted` and never calls upstream.
+   - A failed upstream mint releases the reservation (nothing is charged).
+   - `/api/session/end` refunds once and is a no-op when replayed.
+   - `/api/games` rejects an unparseable PGN with 400 and writes nothing.
+   - A game completed twice is rated once.
    - A cross-origin request in production returns 403 and never calls upstream.
    - No response body, header, or log line contains any substring of
-     `ASSEMBLYAI_API_KEY`.
+     `ASSEMBLYAI_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY`.
+   - Every route returns a well-formed response — the regression case for the
+     `NextResponse.next()` failure.
 
 2. **`src/lib/speech.ts` is not wired into the application.** The browser
    `speechSynthesis` path was removed in favour of AssemblyAI agent audio,

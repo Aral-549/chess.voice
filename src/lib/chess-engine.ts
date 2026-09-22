@@ -1024,6 +1024,45 @@ export class ChessEngine {
 
   // --- Reset ---
 
+  /**
+   * Restore a game from PGN.
+   *
+   * Rebuilds `moveHistory` and `capturedPieces` from the loaded moves rather
+   * than only swapping the board, so a resumed game answers "what has been
+   * captured" and "what was the last move" exactly as an uninterrupted one
+   * does — which is what a player relying on spoken board state depends on.
+   *
+   * Returns false and leaves the engine untouched if the PGN will not parse.
+   * A half-restored game is worse than a fresh one.
+   *
+   * See contracts/game-persistence.md, cases 3 and 13.
+   */
+  loadPgn(pgn: string): boolean {
+    const probe = new Chess();
+    try {
+      probe.loadPgn(pgn);
+    } catch {
+      return false;
+    }
+
+    const moves = probe.history({ verbose: true }) as unknown as Move[];
+
+    this.game = probe;
+    this.moveHistory = moves;
+    this.capturedPieces = { white: [], black: [] };
+    for (const move of moves) {
+      if (!move.captured) continue;
+      // Same attribution as makeMove: the capture is filed under the capturer.
+      if (move.color === 'w') this.capturedPieces.white.push(move.captured);
+      else this.capturedPieces.black.push(move.captured);
+    }
+    this.isResigned = false;
+    this.resignedColor = null;
+    this.pendingPremove = null;
+    this.pendingConfirmation = null;
+    return true;
+  }
+
   reset(fen?: string): void {
     this.game = new Chess(fen);
     this.moveHistory = [];

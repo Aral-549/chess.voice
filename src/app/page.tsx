@@ -13,6 +13,8 @@ import { ChessBoardPanel } from "@/components/board/ChessBoardPanel";
 import { SettingsToolbar } from "@/components/a11y/SettingsToolbar";
 import { ShortcutsModal } from "@/components/a11y/ShortcutsModal";
 import { GameOverModal } from "@/components/a11y/GameOverModal";
+import { AccountPanel } from "@/components/account/AccountPanel";
+import { useGamePersistence } from "@/hooks/useGamePersistence";
 import { gameOverVerdict } from "@/lib/game-verdict";
 import {
   playGameStartSound,
@@ -65,6 +67,33 @@ export default function Home() {
       window.removeEventListener("keydown", onFirstInteraction);
     };
   }, []);
+
+  // --- Persistence -------------------------------------------------------
+  // The verdict the rating is written from is the same one the sound uses, so
+  // a game can never be saved as a win and announced as a loss.
+  const persistedOutcome = (() => {
+    if (!coach.isGameOver) return null;
+    const { isCheckmate, isDraw, isStalemate, turn } = coach.snapshot ?? {};
+    const verdict = gameOverVerdict({
+      isGameOver: true, isCheckmate, isDraw, isStalemate, turn, playerColor: "w",
+    });
+    if (verdict === "victory") return "win" as const;
+    if (verdict === "defeat") return "loss" as const;
+    if (verdict === "draw") return "draw" as const;
+    return null;
+  })();
+
+  const persistence = useGamePersistence({
+    snapshot: { pgn: coach.snapshot?.pgn ?? "", isGameOver: coach.isGameOver },
+    difficulty: coach.difficulty,
+    timeControl: coach.clock?.mode ?? "casual",
+    outcome: persistedOutcome,
+    onResume: (resume) => {
+      // A PGN that will not load leaves the fresh board in place rather than
+      // showing a half-restored position.
+      coach.resumeFromPgn(resume.pgn, resume.difficulty);
+    },
+  });
 
   // Play win/loss/draw sound when game ends (only once per game)
   const gameOverSoundPlayedRef = useState(false);
@@ -162,13 +191,19 @@ export default function Home() {
             />
           </div>
 
-          <button
-            type="button"
-            onClick={coach.resetGame}
-            className="rounded-full border border-border bg-bg-raised px-3 py-1 text-xs font-semibold text-fg-muted hover:border-accent hover:text-accent transition-colors active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
-          >
-            New Game
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <AccountPanel />
+            <button
+              type="button"
+              onClick={() => {
+                persistence.startNewGame();
+                coach.resetGame();
+              }}
+              className="rounded-full border border-border bg-bg-raised px-3 py-1 text-xs font-semibold text-fg-muted hover:border-accent hover:text-accent transition-colors active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
+            >
+              New Game
+            </button>
+          </div>
         </div>
       </header>
 

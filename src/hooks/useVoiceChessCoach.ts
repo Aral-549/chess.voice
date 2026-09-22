@@ -217,6 +217,47 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
     setTimeout(() => playGameStartSound(), 100);
   }, [coach, game, clock, syncSnapshot]);
 
+  /**
+   * Restore a previously saved game.
+   *
+   * Mirrors resetGame, but seeds both the authoritative engine and the UI
+   * mirror from PGN instead of clearing them. Returns false if the PGN will
+   * not load, so the caller can fall back to a fresh board rather than showing
+   * a half-restored position.
+   *
+   * See contracts/game-persistence.md case 3.
+   */
+  const resumeFromPgn = useCallback(
+    (pgn: string, resumedDifficulty?: Difficulty) => {
+      if (!coach.loadPgn(pgn)) return false;
+
+      try {
+        game.loadPgn(pgn);
+      } catch {
+        return false;
+      }
+
+      if (resumedDifficulty) {
+        coach.setDifficulty(resumedDifficulty);
+        setEngineDifficulty(resumedDifficulty);
+        setDifficulty(resumedDifficulty);
+      }
+
+      clock.resetClock();
+      syncSnapshot();
+      setEntries([
+        {
+          id: nextId(),
+          speaker: "system",
+          text: "Resumed your saved game. Press J to speak your move.",
+          timestamp: Date.now(),
+        },
+      ]);
+      return true;
+    },
+    [coach, game, clock, syncSnapshot, setDifficulty],
+  );
+
   const dispatchToolSideEffects = useCallback(
     (parsed: Record<string, unknown>, toolName: string) => {
       // 1. Timer / Blitz actions
@@ -566,6 +607,7 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
     repeatLast,
     submitTextFallback,
     attemptManualMove,
+    resumeFromPgn,
     describeBoard,
     undoMove,
     resetGame,

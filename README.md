@@ -7,7 +7,7 @@
 
 [![CI](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml/badge.svg)](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-368%20passing-brightgreen.svg)](#verification)
+[![Tests](https://img.shields.io/badge/tests-413%20passing-brightgreen.svg)](#verification)
 
 ---
 
@@ -135,8 +135,41 @@ gaplessly, with barge-in support so you can interrupt the coach mid-sentence.
 ```
 
 The browser never sees the AssemblyAI API key. `/api/token` mints a short-lived
-token server-side (300 s TTL), rate-limited to 10/minute per IP and
-origin-checked in production. See [SECURITY.md](./SECURITY.md).
+token server-side (300 s TTL) against a **durable per-identity voice budget**
+held in Postgres, origin-checked in production. See [SECURITY.md](./SECURITY.md)
+and [docs/SETUP.md](./docs/SETUP.md).
+
+## Accounts, saved games, and not going bankrupt
+
+A public voice app is an open tap on your API credits unless something counts
+what each caller takes. This one does.
+
+- **Identity without signup.** Every visitor gets a signed, httpOnly device
+  cookie. Judges and first-time players never see a login wall — the demo is
+  fully playable anonymously, because a signup screen is a terrible thing to
+  score a voice agent on.
+- **A budget that actually holds.** Each mint reserves time against a daily
+  allowance (30 min anonymous, 2 h signed-in), decremented under a row lock so
+  two simultaneous requests cannot both spend the last of it. A single session
+  is capped at 10 minutes, so a leaked token has a bounded cost. Every mint
+  writes a ledger row, so spend is attributable to an identity.
+- **Reserve, then refund.** A mint pessimistically reserves the full session
+  length and hands back the difference when the client reports how long it
+  actually ran. A client that reports nothing keeps the full reservation —
+  silence costs the user, never the operator.
+- **Sign-in is a magic link and nothing else.** No password field, no CAPTCHA,
+  no social buttons. For a screen reader user a password flow means a hidden
+  field, an unlabelled strength meter and errors that often never get announced.
+  One labelled input, one button, status through a live region.
+- **Games survive.** Position, move history and captured pieces are restored
+  from PGN, and the resume is *announced* — a sighted player sees the board
+  repopulate, everyone else has to be told. Losing a game in progress costs a
+  blind player the position they were holding in memory, so this is an
+  accessibility feature, not a convenience.
+- **It degrades instead of failing.** With no database configured the app plays
+  normally, hides the account panel entirely rather than offering a button that
+  cannot work, and falls back to a weak in-process limiter that is explicitly
+  labelled as such.
 
 ## Accessibility
 
@@ -190,7 +223,7 @@ reliable `AudioWorklet` and microphone support.
 ## Verification
 
 ```bash
-npm test              # 368 tests across 17 files
+npm test              # 413 tests across 19 files
 npx tsc --noEmit      # strict typecheck
 npm run lint
 npm run build
@@ -199,9 +232,10 @@ npm run build
 All four run on every push and pull request via
 [GitHub Actions](./.github/workflows/ci.yml).
 
-Roughly **5,000 lines of tests against 9,000 lines of source** — including
+Roughly **6,000 lines of tests against 10,000 lines of source** — including
 adversarial suites that attack the chess engine with illegal input, malformed
-agent protocol frames, and contradictory game states.
+agent protocol frames, contradictory game states, forged identity cookies and
+hostile quota reports.
 
 ## Engineering discipline
 
@@ -237,9 +271,10 @@ confidently wrong answer is the failure mode that matters:
 | Voice | AssemblyAI Voice Agent API — Universal-3 Pro STT, WebSocket, PCM16 |
 | Chess rules | chess.js |
 | Engine | Minimax with alpha-beta pruning, 4 difficulty levels |
+| Auth & data | Supabase — magic-link auth, Postgres, row level security |
 | Audio | Web Audio API — dual AudioContext, AudioWorklet |
 | Styling | Tailwind CSS |
-| Tests | Vitest — 368 tests, 17 files |
+| Tests | Vitest — 413 tests, 19 files |
 | Hosting | Vercel |
 
 ## License
