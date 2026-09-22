@@ -4,5 +4,5 @@ contact_links:
     url: https://voicechessmate.vercel.app/
     about: Reproduce the issue on the deployed build before filing.
   - name: Security vulnerability
-    url: https://github.com/Aral-549/voicechessmate-assemblyai/security/advisories/new
+    url: https://github.com/Aral-549/chess.voice/security/advisories/new
     about: Report credential or token-minting issues privately, not as a public issue.

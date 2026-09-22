@@ -37,7 +37,7 @@ Examples of unacceptable behaviour:
 
 Instances of abusive, harassing, or otherwise unacceptable behaviour may be
 reported to the project maintainers through
-[GitHub issues](https://github.com/Aral-549/voicechessmate-assemblyai/issues)
+[GitHub issues](https://github.com/Aral-549/chess.voice/issues)
 or privately via a security advisory. All complaints will be reviewed and
 investigated promptly and fairly.
 

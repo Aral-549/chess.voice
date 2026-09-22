@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report security issues privately via
-[GitHub Security Advisories](https://github.com/Aral-549/voicechessmate-assemblyai/security/advisories/new)
+[GitHub Security Advisories](https://github.com/Aral-549/chess.voice/security/advisories/new)
 rather than opening a public issue.
 
 We aim to acknowledge reports within 72 hours.

@@ -5,9 +5,9 @@
 **[▶ Live demo](https://voicechessmate.vercel.app/)** · Built on the
 [AssemblyAI Voice Agent API](https://www.assemblyai.com/docs/voice-agents/voice-agent-api)
 
-[![CI](https://github.com/Aral-549/voicechessmate-assemblyai/actions/workflows/ci.yml/badge.svg)](https://github.com/Aral-549/voicechessmate-assemblyai/actions/workflows/ci.yml)
+[![CI](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml/badge.svg)](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-355%20passing-brightgreen.svg)](#verification)
+[![Tests](https://img.shields.io/badge/tests-368%20passing-brightgreen.svg)](#verification)
 
 ---
 
@@ -176,8 +176,8 @@ Accessibility is the architecture here, not a compliance checkbox.
 [AssemblyAI API key](https://www.assemblyai.com/dashboard/signup).
 
 ```bash
-git clone https://github.com/Aral-549/voicechessmate-assemblyai.git
-cd voicechessmate-assemblyai
+git clone https://github.com/Aral-549/chess.voice.git
+cd chess.voice
 npm install
 
 cp .env.local.example .env.local   # add ASSEMBLYAI_API_KEY
@@ -190,7 +190,7 @@ reliable `AudioWorklet` and microphone support.
 ## Verification
 
 ```bash
-npm test              # 355 tests across 16 files
+npm test              # 368 tests across 17 files
 npx tsc --noEmit      # strict typecheck
 npm run lint
 npm run build
@@ -239,7 +239,7 @@ confidently wrong answer is the failure mode that matters:
 | Engine | Minimax with alpha-beta pruning, 4 difficulty levels |
 | Audio | Web Audio API — dual AudioContext, AudioWorklet |
 | Styling | Tailwind CSS |
-| Tests | Vitest — 355 tests, 16 files |
+| Tests | Vitest — 368 tests, 17 files |
 | Hosting | Vercel |
 
 ## License
