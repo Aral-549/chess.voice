@@ -15,6 +15,8 @@ interface SettingsToolbarProps {
   difficulty?: Difficulty;
   onSelectDifficulty?: (diff: Difficulty) => void;
   onSetTheme?: (theme: AppTheme) => void;
+  playMode?: "normal" | "blindfold" | "handsfree";
+  onSelectPlayMode?: (mode: "normal" | "blindfold" | "handsfree") => void;
 }
 
 export function SettingsToolbar({
@@ -28,12 +30,20 @@ export function SettingsToolbar({
   difficulty,
   onSelectDifficulty,
   onSetTheme,
+  playMode = "normal",
+  onSelectPlayMode,
 }: SettingsToolbarProps) {
   const themes: { id: AppTheme; label: string }[] = [
     { id: "walnut", label: "Walnut" },
     { id: "green", label: "Green" },
     { id: "slate", label: "Slate" },
     { id: "high-contrast", label: "High Contrast" },
+  ];
+
+  const modes: { id: "normal" | "blindfold" | "handsfree"; label: string; hint: string }[] = [
+    { id: "normal", label: "Normal", hint: "Board visible, hold J to speak" },
+    { id: "blindfold", label: "Blindfold", hint: "Board hidden — train holding the position in your head" },
+    { id: "handsfree", label: "Hands-free", hint: "Listens continuously and confirms every move" },
   ];
 
   const difficulties: { id: Difficulty; label: string; rating: string; key: string }[] = [
@@ -76,6 +86,41 @@ export function SettingsToolbar({
                 >
                   {label}
                   <span className="ml-1 opacity-70 font-mono text-[10px]">({key})</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Play mode — the clickable path to blindfold and hands-free, so they
+            are not voice-only. Every feature needs a keyboard path. */}
+        {onSelectPlayMode && (
+          <div
+            className="flex items-center gap-1 p-1 rounded-lg border border-border bg-bg-raised"
+            role="radiogroup"
+            aria-label="Play mode"
+          >
+            <span className="font-mono text-[11px] text-fg-muted px-1.5 uppercase tracking-wider font-semibold">
+              Mode:
+            </span>
+            {modes.map(({ id, label, hint }) => {
+              const active = playMode === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => onSelectPlayMode(id)}
+                  title={hint}
+                  className={cn(
+                    "px-2 py-1 rounded text-xs font-semibold transition-all cursor-pointer",
+                    active
+                      ? "bg-accent text-bg shadow-xs"
+                      : "text-fg-muted hover:text-fg hover:bg-bg",
+                  )}
+                >
+                  {label}
                 </button>
               );
             })}

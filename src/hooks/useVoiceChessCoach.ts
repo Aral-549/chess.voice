@@ -579,6 +579,21 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
 
   /** Spoken board readouts. The old UI had these on D/T/O/C; the new one lost
    *  them, but they're the core of playing without sight. */
+  /** Keyboard path for "why was that bad?". Every feature needs one — voice
+   *  complements the keyboard, it never replaces it. Runs the tool locally so
+   *  it works with no session and costs no voice budget. */
+  const explainLastMove = useCallback(() => {
+    runTool("explain_last_move", {});
+  }, [runTool]);
+
+  /** Keyboard path for the play modes. */
+  const changePlayMode = useCallback(
+    (mode: "normal" | "blindfold" | "handsfree") => {
+      runTool("set_play_mode", { mode });
+    },
+    [runTool],
+  );
+
   const describeBoard = useCallback(
     (focus: "full" | "tactical" | "threats" | "my_pieces" | "captures" = "full") => {
       const clip = { full: "describe", threats: "threats", tactical: "tactical", my_pieces: "pieces", captures: "captures" }[focus];
@@ -620,6 +635,8 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
     attemptManualMove,
     resumeFromPgn,
     describeBoard,
+    explainLastMove,
+    changePlayMode,
     undoMove,
     resetGame,
     difficulty,

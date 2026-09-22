@@ -175,6 +175,7 @@ export default function Home() {
       d: () => coach.describeBoard("full"),
       t: () => coach.describeBoard("threats"),
       g: () => coach.describeBoard("tactical"),
+      w: () => coach.explainLastMove(),
       u: () => coach.undoMove(),
       b: () => toggleBoardVisible(),
       c: () => toggleHighContrast(),
@@ -211,6 +212,8 @@ export default function Home() {
               onOpenShortcuts={() => setShortcutsOpen(true)}
               difficulty={coach.difficulty}
               onSelectDifficulty={coach.setDifficulty}
+              playMode={playMode}
+              onSelectPlayMode={(mode) => coach.changePlayMode(mode)}
               onSetTheme={setTheme}
             />
           </div>

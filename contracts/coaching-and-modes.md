@@ -88,13 +88,23 @@ losing *the position in your head*. That is what gets measured.
 
 | # | Input | Expected output | Notes |
 |---|-------|------------------|-------|
-| 11 | Blindfold enabled | Board hidden; the show/hide control is disabled and says why | Not merely hidden |
+| 11 | Blindfold enabled | Board hidden; a mode badge is visible; the reveal control stays available | See the note below — deliberately not disabled |
 | 12 | Player asks to show the board mid-game | Attempt ends; the game continues sighted; the score is kept and marked broken | Peeking is allowed; pretending you did not is not |
 | 13 | Player names a move for a piece that is not on that square | Counted as a **position error**; refused as usual | The metric that matters |
 | 14 | Player names a legal move | Not an error, whatever its quality | Blindfold scoring measures memory, not skill |
 | 15 | Player asks "describe the board" | Allowed, counted as an **assist** | A crutch, not a failure |
 | 16 | Game ends in blindfold mode | Summary: moves played, position errors, assists used | |
 | 17 | Blindfold disabled mid-game | Attempt ends as at case 12 | |
+
+### Why the reveal control is not disabled
+
+An earlier draft of this contract said the show/hide control should be disabled
+while blindfold is on. That contradicted case 12, and case 12 is the better
+design: disabling a control to enforce a training discipline is the app
+policing the player, and it is exactly the kind of "for your own good" lockout
+assistive software should avoid. Revealing is allowed, it ends the attempt, and
+the summary says the attempt is unranked. The player decides; the record stays
+honest.
 
 ### Accessibility note
 For a screen reader user the board is *always* effectively hidden, so blindfold

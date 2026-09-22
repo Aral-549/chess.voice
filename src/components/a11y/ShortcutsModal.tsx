@@ -9,6 +9,7 @@ const SHORTCUTS: [string, string][] = [
   ["U", "Undo the last move"],
   ["H", "Ask the coach for a tactical hint"],
   ["T", "Threats — scan what pieces of yours are attacked"],
+  ["W", "Why? — have the coach explain the last move played"],
   ["D", "Spatial scan — systematic Rank 1 to Rank 8 occupied squares"],
   ["B", "Show or hide the visual board"],
   ["F", "Flip board perspective (White / Black)"],
