@@ -249,3 +249,59 @@ describe('hands-free policy (cases 24-27)', () => {
     expect(policyFor('blindfold').continuousListening).toBe(false);
   });
 });
+
+describe('game library — provenance, pinned against a reference database', () => {
+  // Verified 2026-09-23 against pgnmentor.com's Morphy and Anderssen
+  // collections. Copied here so the check survives without network access:
+  // if someone edits the shipped movetext, this fails.
+  //
+  // The reference records the final move as "+" where we write "#". Ours is the
+  // more precise notation — chess.js confirms checkmate in both — and the
+  // "ends in checkmate" case above pins that separately.
+  const REFERENCE: Record<string, string> = {
+    opera:
+      '1.e4 e5 2.Nf3 d6 3.d4 Bg4 4.dxe5 Bxf3 5.Qxf3 dxe5 6.Bc4 Nf6 7.Qb3 Qe7 ' +
+      '8.Nc3 c6 9.Bg5 b5 10.Nxb5 cxb5 11.Bxb5+ Nbd7 12.O-O-O Rd8 13.Rxd7 Rxd7 ' +
+      '14.Rd1 Qe6 15.Bxd7+ Nxd7 16.Qb8+ Nxb8 17.Rd8',
+    immortal:
+      '1.e4 e5 2.f4 exf4 3.Bc4 Qh4+ 4.Kf1 b5 5.Bxb5 Nf6 6.Nf3 Qh6 7.d3 Nh5 ' +
+      '8.Nh4 Qg5 9.Nf5 c6 10.g4 Nf6 11.Rg1 cxb5 12.h4 Qg6 13.h5 Qg5 14.Qf3 Ng8 ' +
+      '15.Bxf4 Qf6 16.Nc3 Bc5 17.Nd5 Qxb2 18.Bd6 Bxg1 19.e5 Qxa1+ 20.Ke2 Na6 ' +
+      '21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7',
+  };
+
+  /** Bare SAN list, so formatting differences are not mistaken for wrong moves. */
+  const sanList = (pgn: string): string[] => {
+    const chess = new Chess();
+    chess.loadPgn(pgn);
+    return chess.history();
+  };
+
+  const refSanList = (movetext: string): string[] =>
+    movetext
+      .replace(/\d+\./g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+
+  it.each(Object.keys(REFERENCE))('%s matches the reference game move for move', (id) => {
+    const game = LIBRARY.find((g) => g.id === id)!;
+    const ours = sanList(game.pgn);
+    const theirs = refSanList(REFERENCE[id]);
+
+    expect(ours.length).toBe(theirs.length);
+    // Compare ignoring the check/mate suffix, which is a notation choice.
+    const strip = (san: string) => san.replace(/[+#]$/, '');
+    expect(ours.map(strip)).toEqual(theirs.map(strip));
+  });
+
+  it('attributes the games to the players who actually played them', () => {
+    const opera = LIBRARY.find((g) => g.id === 'opera')!;
+    expect(opera.white).toMatch(/Morphy/);
+    expect(opera.year).toBe(1858);
+
+    const immortal = LIBRARY.find((g) => g.id === 'immortal')!;
+    expect(immortal.white).toMatch(/Anderssen/);
+    expect(immortal.black).toMatch(/Kieseritzky/);
+    expect(immortal.year).toBe(1851);
+  });
+});

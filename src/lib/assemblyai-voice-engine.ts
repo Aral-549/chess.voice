@@ -17,6 +17,7 @@
 
 import { VoiceAgentManager } from './voice-agent';
 import type { SessionConfig } from '@/types';
+import { toVoiceFailure } from './voice-errors';
 import type { VoiceEngine, VoiceEngineEvent, VoiceEngineEventPayload } from './voice-engine';
 
 export interface AssemblyAIEngineOptions {
@@ -219,9 +220,15 @@ export class AssemblyAIVoiceEngine implements VoiceEngine {
         })
         .catch((err: unknown) => {
           this.connecting = false;
+          // `toVoiceFailure` guarantees a sentence a person can act on, whether
+          // the throw came from us (a denied mic, an exhausted quota) or from
+          // somewhere we have never seen.
+          const failure = toVoiceFailure(err);
           this.emit('connect-failed');
           this.emit('error', {
-            message: err instanceof Error ? err.message : 'Could not start the voice session',
+            message: failure.message,
+            code: failure.code,
+            recoverable: failure.recoverable,
           });
         });
       return;

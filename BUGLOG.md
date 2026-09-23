@@ -8,6 +8,148 @@ Entries are newest first.
 
 ---
 
+## 2026-09-23 — announce() announced nothing, app-wide
+
+The most serious bug found in this project so far, and it had been there the
+whole time. Found by Playwright while verifying something else: the live region
+the mic-denied message should have landed in did not exist.
+
+- **Symptom:** `document.getElementById('sr-polite')` returned null on the live
+  production build. Every one of the 20 `announce()` call sites was a silent
+  no-op, so an app whose entire purpose is narrating a chessboard to people who
+  cannot see it announced **nothing at all** to a screen reader.
+- **Root cause:** `lib/announce.ts` resolves its target with `getElementById`
+  and returns quietly when the element is missing:
+
+      const el = document.getElementById(id);
+      if (el) { ... }
+
+  No file rendered `#sr-polite` or `#sr-assertive`. The guard that was there to
+  make the helper SSR-safe also made a completely unwired feature look healthy.
+- **Stage/module:** `lib/announce.ts` → (missing) `app/layout.tsx`
+- **Why nothing caught it:** it typechecked, linted, and passed 532 tests. The
+  helper is correct in isolation; the wiring it depends on is in a server
+  component that no unit test renders. Only driving the real page found it.
+- **Fix:** Render both regions in the root layout, so they exist before
+  anything can announce into them and survive every re-render.
+- **Regression case added:** `src/lib/__tests__/live-region-wiring.test.ts` —
+  asserts every id `announce()` targets is rendered by the layout, carries the
+  matching `aria-live`, is a separate element, and is clipped rather than
+  `hidden`. Verified to fail when the regions are removed.
+- **Status:** verified
+
+---
+
+## 2026-09-23 — Keyboard commands went silent when voice was offline
+
+Direct consequence of handling the failure states: once a denied mic was
+survivable, the question was what the survivor actually gets.
+
+- **Symptom:** With no live agent session — denied microphone, exhausted quota,
+  or no API key — pressing **K** (clock), **D** (describe board) or any other
+  spoken command produced no audio and no announcement. A transcript entry
+  appeared, which is no use to someone who cannot see it. The failure message
+  promised "everything still works by keyboard"; the board did, the speech
+  did not.
+- **Root cause:** `speak()` in `useVoiceChessCoach` called only
+  `engine.speak()`, which requires a connected WebSocket session. There was no
+  path from a keyboard command to the screen reader.
+- **Stage/module:** `hooks/useVoiceChessCoach.ts`, `speak()`
+- **Fix:** Branch on `engine.isLive` — the agent speaks when it can, otherwise
+  the text goes to the polite live region. Conditional on purpose: announcing
+  unconditionally would make the screen reader talk over the TTS.
+- **Verified live:** with voice offline, K announces "You have 5 minutes. The
+  coach has 5 minutes. Your move.", D announces the full rank-by-rank board in
+  IBCA phonetics, and a typed move announces the coach's reply.
+- **Regression case added:** `live-region-wiring.test.ts` — asserts the
+  `engine.isLive` branch exists and that `announce()` appears exactly once in
+  `speak()`. Verified to fail when reverted.
+- **Status:** verified
+
+## 2026-09-23 — Voice failures read raw JSON and internals aloud
+
+Found by tracing the failure path end to end rather than by a test — the whole
+chain typechecked, linted and passed 532 tests while doing this.
+
+- **Symptom:** Every voice failure reached the player through
+  `Voice error: ${message}. Use the text box to play instead.` For a quota
+  refusal `message` was the raw HTTP body, so a screen reader announced:
+  *"Voice error: Token minting failed 429: open brace quote error quote colon
+  quote You have used your voice time for today…"* — the server's carefully
+  written sentence, wrapped in punctuation that gets spoken.
+- **Root cause:** `voice-agent.ts` threw `new Error("Token minting failed
+  (status): body")` and a bare `getUserMedia` rejection; the engine
+  flattened whatever it caught to `err.message`. Nothing between the throw and
+  the live region was responsible for how a failure should *sound*.
+- **Stage/module:** `lib/voice-agent.ts` → `lib/assemblyai-voice-engine.ts` →
+  `hooks/useVoiceChessCoach.ts` → `announce()`
+- **Fix:** New `lib/voice-errors.ts` owns the wording. `VoiceAgentError` carries
+  a prepared `VoiceFailure` from the throw site; the hook speaks it verbatim.
+- **Regression case added:** `src/lib/__tests__/voice-errors.test.ts` — the
+  `invariants` block, which asserts no message can contain JSON punctuation, a
+  DOMException name, an env var name or an HTTP status.
+- **Status:** verified
+
+---
+
+## 2026-09-23 — Developer-facing error text would have been read to players
+
+Found while writing `contracts/voice-failure-messages.md` — enumerating the
+token route's refusals is what exposed it.
+
+- **Symptom:** A deployment missing its API key would announce to the player:
+  *"ASSEMBLYAI_API_KEY not configured. Edit .env.local and restart the dev
+  server."* Same class for `upstream_error` ("Failed to mint token"),
+  `cross_origin` ("Forbidden: cross-origin token request") and `internal`.
+- **Root cause:** My first version of `describeTokenError` trusted the server's
+  `error` string whenever a `code` was present, on the reasoning that the route
+  writes human sentences. Only three of its ten refusals actually do; the rest
+  are addressed to whoever deploys it.
+- **Stage/module:** `lib/voice-errors.ts`, against `app/api/token/route.ts`
+- **Fix:** Inverted to an allowlist (`PLAYER_FACING_TOKEN_CODES`), plus a
+  `looksLikeData` check on the string that actually arrived, so an approved
+  code still cannot speak something shaped like JSON.
+- **Regression case added:** `voice-errors.test.ts` — case 12, cases 13-15,
+  "a friendly-looking message under a non-allowlisted code is NOT forwarded".
+- **Status:** verified
+
+---
+
+## 2026-09-23 — A `null` response body crashed the error handler
+
+Found by the adversarial pass over `voice-errors.ts`, fuzzing body shapes.
+
+- **Symptom:** `describeTokenError(500, 'null')` threw
+  `TypeError: Cannot read properties of null (reading 'code')`.
+- **Root cause:** `JSON.parse("null")` returns `null`, not an object, and the
+  code read `.code` straight off the parse result. The throw landed inside the
+  one code path whose entire job is to keep a failure speakable, so instead of
+  a bad-news sentence the player would have got silence.
+- **Stage/module:** `lib/voice-errors.ts`, `describeTokenError`
+- **Fix:** Accept the parse result only when it is a non-null, non-array object.
+- **Regression case added:** `voice-errors.test.ts` — "REGRESSION: a body of
+  literal `null` does not crash the handler" and "non-object JSON bodies are
+  ignored rather than trusted". Both verified to fail when the guard is removed.
+- **Status:** verified
+
+---
+
+## 2026-09-23 — Capacity refusal offered the keyboard twice
+
+- **Symptom:** *"…the daily limit for everyone has been reached. You can keep
+  playing with the keyboard, and voice returns within 24 hours. You can keep
+  playing by typing your moves."*
+- **Root cause:** `describeTokenError` appended a fallback instruction to every
+  allowlisted server message, including the one that already contained one.
+  Visible on screen as mild redundancy; at speech rate it is a whole extra
+  sentence repeating what was just said, during bad news.
+- **Stage/module:** `lib/voice-errors.ts`
+- **Fix:** Append only when the server text does not already mention the
+  keyboard or typing.
+- **Regression case added:** `voice-errors.test.ts` — case 9, which asserts
+  `/keep playing/gi` matches exactly once. Verified to fail when reverted.
+- **Status:** verified
+
 ## 2026-09-23 — Two UI defects found by running the app
 
 - **Symptom 1:** Every new transcript entry scrolled the whole left column,

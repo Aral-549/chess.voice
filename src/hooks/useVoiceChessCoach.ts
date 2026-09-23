@@ -8,6 +8,7 @@ import { Chess } from "chess.js";
 import { AssemblyAIVoiceEngine } from "@/lib/assemblyai-voice-engine";
 import { announce } from "@/lib/announce";
 import { ChessEngine } from "@/lib/chess-engine";
+import type { VoiceFailure } from "@/lib/voice-errors";
 import { handleToolCall, CHESS_TOOLS, setEngineDifficulty } from "@/lib/tool-handlers";
 import { SYSTEM_PROMPT, GREETING, CHESS_KEYTERMS } from "@/lib/system-prompt";
 import {
@@ -113,6 +114,10 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
     },
   ]);
   const [status, setStatus] = useState<CoachStatus>("idle");
+  // The last voice failure, kept so the UI can show it next to the control the
+  // player pressed. Announcing it once is not enough: a screen reader user who
+  // tabs away and back has no way to re-read a live region.
+  const [voiceError, setVoiceError] = useState<VoiceFailure | null>(null);
   const [partialText, setPartialText] = useState("");
   const [caption, setCaption] = useState("");
   const [speechRate, setSpeechRate] = useState(1);
@@ -193,8 +198,20 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
         // always replays what the coach actually said, not the move notation.
         addEntry("coach", text);
       }
-      setStatus("speaking");
-      engine.speak(text, { rate: speechRate });
+      // When the agent is live it says this out loud, and mirroring it into a
+      // live region would make a screen reader talk over the TTS. When it is
+      // NOT live — no session yet, a denied microphone, an exhausted quota —
+      // `engine.speak` reaches nobody, and every keyboard command that speaks
+      // (K for the clock, board descriptions, mode changes) went silent for
+      // exactly the user this app exists for. The transcript entry above is
+      // visible, which is no help to someone who cannot see it.
+      // See BUGLOG 2026-09-23.
+      if (engine.isLive) {
+        setStatus("speaking");
+        engine.speak(text, { rate: speechRate });
+      } else {
+        announce(text);
+      }
     },
     [engine, speechRate, addEntry],
   );
@@ -426,7 +443,10 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
     const streamingTextRef = { current: "" };
 
     const unsubscribers = [
-      engine.on("connecting", () => setStatus("connecting")),
+      engine.on("connecting", () => {
+        setVoiceError(null); // a fresh attempt clears the last failure
+        setStatus("connecting");
+      }),
       engine.on("connect-failed", () => setStatus("idle")),
       engine.on("listening-start", () => {
         setStatus("listening");
@@ -471,10 +491,14 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
         }
         streamingTextRef.current = "";
       }),
-      engine.on("error", ({ message }) => {
-        const text = `Voice error: ${message}. Use the text box to play instead.`;
-        addEntry("system", text);
-        announce(text);
+      engine.on("error", ({ message, code, recoverable }) => {
+        // The message arrives already written for a person (lib/voice-errors.ts),
+        // so it is spoken as-is. The old code prefixed "Voice error:" and
+        // appended a fallback instruction, which on a quota refusal produced a
+        // sentence, then raw JSON, then a second contradicting instruction.
+        addEntry("system", message);
+        announce(message);
+        setVoiceError({ message, code: code ?? "unknown", recoverable: recoverable ?? true });
         setStatus("idle");
       }),
     ];
@@ -632,6 +656,7 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
 
   return {
     isVoiceSupported,
+    voiceError,
     fen: snapshot.fen,
     moveHistory: snapshot.history,
     turn: snapshot.turn,

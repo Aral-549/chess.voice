@@ -50,7 +50,38 @@ export default function RootLayout({
       {/* Colours come from the theme tokens in globals.css. The previous
           hardcoded bg-gray-900/text-white fought them, which is why the
           high-contrast and light themes never fully took. */}
-      <body className="antialiased h-full">{children}</body>
+      <body className="antialiased h-full">
+        {children}
+
+        {/* ── Screen-reader live regions ──────────────────────────────────
+            `lib/announce.ts` looks these up by id with getElementById and
+            silently does nothing when they are absent — which is exactly what
+            happened: they existed in no file, so all 20 announce() call sites
+            were no-ops and the app announced nothing at all to a screen
+            reader. In an app built for blind players that is the whole
+            product. See BUGLOG 2026-09-23.
+
+            They live in the root layout, not in a component, so that they are
+            in the DOM before anything can try to announce into them, and
+            survive every re-render and route change. Two regions because
+            polite and assertive must not share one node: writing an urgent
+            message into a polite region does not make it urgent, and
+            alternating priorities in one node makes announcements collide. */}
+        <div
+          id="sr-polite"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+        />
+        <div
+          id="sr-assertive"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+          className="sr-only"
+        />
+      </body>
     </html>
   );
 }

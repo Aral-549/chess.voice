@@ -20,6 +20,7 @@
 // ============================================================
 
 import type { SessionConfig, VoiceAgentEvent } from '@/types';
+import { VoiceAgentError, describeMicError, describeTokenError } from '@/lib/voice-errors';
 
 const AGENT_WS_URL = 'wss://agents.assemblyai.com/v1/ws';
 const CAPTURE_SAMPLE_RATE = 24_000; // AssemblyAI Voice Agent requires 24kHz input
@@ -195,18 +196,31 @@ export class VoiceAgentManager {
       console.log(`[VoiceAgent] captureContext: ${this.captureContext.sampleRate}Hz state=${this.captureContext.state}`);
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Microphone access is not supported in this browser context. Please use localhost or HTTPS.');
+        throw new VoiceAgentError(
+          describeMicError(new Error('Microphone access requires localhost or HTTPS')),
+        );
       }
 
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate: CAPTURE_SAMPLE_RATE,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+      // The rejection here is the single most likely failure in the whole
+      // app — someone hits "Block" on the permission prompt — and it is the
+      // one a blind player has least evidence about, because the prompt they
+      // dismissed was visual. Translate it before it goes anywhere near the
+      // live region.
+      try {
+        this.mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            sampleRate: CAPTURE_SAMPLE_RATE,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+      } catch (micErr) {
+        const failure = describeMicError(micErr);
+        console.warn(`[VoiceAgent] mic unavailable (${failure.code}):`, micErr);
+        throw new VoiceAgentError(failure, { cause: micErr });
+      }
 
       // ── 2. Mic capture pipeline in captureContext (24kHz) ────────────────
       // createMediaStreamSource in captureContext: the browser resamples the
@@ -253,8 +267,13 @@ export class VoiceAgentManager {
       // ── 3. Get a temporary token from our backend ────────────────────────
       const tokenRes = await fetch('/api/token');
       if (!tokenRes.ok) {
+        // /api/token answers quota and capacity limits in sentences written for
+        // a person. Wrapping those in "Token minting failed (429): {…}" — which
+        // is what this did — reads the JSON aloud, punctuation and all.
         const errBody = await tokenRes.text();
-        throw new Error(`Token minting failed (${tokenRes.status}): ${errBody}`);
+        const failure = describeTokenError(tokenRes.status, errBody);
+        console.warn(`[VoiceAgent] token refused (${tokenRes.status}/${failure.code})`);
+        throw new VoiceAgentError(failure);
       }
       const tokenPayload = await tokenRes.json();
       const { token } = tokenPayload;

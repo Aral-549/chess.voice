@@ -351,6 +351,7 @@ export default function Home() {
             }}
             onCancel={coach.cancelListening}
             onRepeat={coach.repeatLast}
+            voiceError={coach.voiceError}
           />
           <CaptionBar
             caption={coach.caption}
@@ -358,7 +359,12 @@ export default function Home() {
             status={coach.status}
             onRepeat={coach.repeatLast}
           />
-          <TextFallbackForm onSubmit={coach.submitTextFallback} emphasized={!coach.isVoiceSupported} />
+          {/* Emphasised whenever typing is the only way through — the browser
+              never supported voice, or this session's attempt failed. */}
+          <TextFallbackForm
+            onSubmit={coach.submitTextFallback}
+            emphasized={!coach.isVoiceSupported || coach.voiceError !== null}
+          />
           </div>
           <TranscriptLog entries={coach.entries} />
         </div>

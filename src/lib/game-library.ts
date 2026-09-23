@@ -5,13 +5,17 @@
 // podcast. This is the most voice-native thing in the app: on a board it is
 // just a PGN viewer, out loud it is a story with a shape.
 //
-// PROVENANCE WARNING, read before adding anything here.
-// The move lists below are transcriptions of very widely reproduced games.
-// `game-library.test.ts` proves every one is *legal chess* that ends the way
-// the record says — it cannot prove the moves are the ones actually played in
-// 1851. Before relying on these publicly, spot-check each against a game
-// database. A game whose provenance you cannot confirm should be removed
-// rather than shipped with a famous name attached to it.
+// PROVENANCE. The two historical games were verified on 2026-09-23 against
+// pgnmentor.com's Morphy and Anderssen collections and match move for move.
+// The reference writes the final move "Rd8+" / "Be7+" where we write "#";
+// ours is the more precise notation and chess.js confirms checkmate in both.
+//
+// `library-and-modes.test.ts` pins the reference movetext inline, so the check
+// survives without network access and fails if anyone edits these.
+//
+// Before ADDING a game: verify it the same way. A move sequence you cannot
+// confirm does not get a famous name attached to it — a wrong attribution in
+// front of a listener who trusts you is worse than a smaller library.
 //
 // See contracts/coaching-and-modes.md, "Provenance rule".
 // ============================================================

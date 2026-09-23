@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import type { CoachStatus } from "@/hooks/useVoiceChessCoach";
+import type { VoiceFailure } from "@/lib/voice-errors";
 import { AudioVisualizer } from "./AudioVisualizer";
 
 const STATUS_LABEL: Record<CoachStatus, string> = {
@@ -20,6 +21,8 @@ interface ListenButtonProps {
   onEndHold?: () => void;
   onCancel?: () => void;
   onRepeat?: () => void;
+  /** Last voice failure, or null. Shown until the next attempt clears it. */
+  voiceError?: VoiceFailure | null;
 }
 
 /**
@@ -35,6 +38,7 @@ export function ListenButton({
   onEndHold,
   onCancel,
   onRepeat,
+  voiceError = null,
 }: ListenButtonProps) {
   const listening = isHolding || status === "listening";
   const connecting = !isHolding && status === "connecting";
@@ -183,23 +187,50 @@ export function ListenButton({
           <span
             className={cn(
               "w-2 h-2 rounded-full",
-              listening
-                ? "bg-accent animate-ping"
-                : connecting
+              voiceError
+                ? "bg-danger"
+                : listening
                   ? "bg-accent animate-ping"
-                  : speaking
-                    ? "bg-accent-2 animate-pulse"
-                    : thinking
-                      ? "bg-accent animate-spin"
-                      : "bg-emerald-400",
+                  : connecting
+                    ? "bg-accent animate-ping"
+                    : speaking
+                      ? "bg-accent-2 animate-pulse"
+                      : thinking
+                        ? "bg-accent animate-spin"
+                        : "bg-emerald-400",
             )}
             aria-hidden="true"
           />
           <span className="text-fg-muted font-medium">
-            {isHolding ? "Listening — release J to send" : STATUS_LABEL[status]}
+            {isHolding
+              ? "Listening — release J to send"
+              : voiceError
+                ? "Voice unavailable — you can still type your moves"
+                : STATUS_LABEL[status]}
           </span>
         </div>
 
+
+        {/* The failure, kept on screen.
+            Deliberately NOT a live region: the hook already announced this
+            through `announce()` when it happened, and a second live region
+            holding the same sentence makes screen readers say it twice. What
+            this adds is persistence — something to find again after tabbing
+            away, which a live region cannot give you. */}
+        {voiceError && (
+          <div className="w-full max-w-xs rounded-lg border border-danger/50 bg-danger/10 px-3 py-2">
+            <p className="text-xs leading-relaxed text-fg">{voiceError.message}</p>
+            {voiceError.recoverable && (
+              <button
+                type="button"
+                onClick={onPress}
+                className="mt-2 rounded-md border border-danger/60 px-2.5 py-1 text-xs font-medium text-fg hover:bg-danger/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Try voice again
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Secondary quick action buttons */}
         <div className="flex items-center gap-2">

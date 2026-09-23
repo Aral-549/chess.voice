@@ -25,7 +25,10 @@ export type VoiceEngineEventPayload = {
   "agent-speaking-start": undefined;
   "agent-speaking-text": { text: string };
   "agent-speaking-end": undefined;
-  error: { message: string };
+  /** `message` is always a sentence written for a person — never a raw browser
+   *  string or an HTTP body. `code` is for logs; `recoverable` says whether
+   *  retrying could plausibly work. See lib/voice-errors.ts. */
+  error: { message: string; code?: string; recoverable?: boolean };
 };
 
 export interface VoiceEngine {
