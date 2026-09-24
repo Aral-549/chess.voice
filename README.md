@@ -2,12 +2,27 @@
 
 > Play tournament chess entirely by voice — no screen, no mouse, no sighted help.
 
-**[▶ Live demo](https://voicechessmate.vercel.app/)** · Built on the
-[AssemblyAI Voice Agent API](https://www.assemblyai.com/docs/voice-agents/voice-agent-api)
+Built on the [AssemblyAI Voice Agent API](https://www.assemblyai.com/docs/voice-agents/voice-agent-api)
+
+![VoiceChessmate](./assets/cover/voicechessmate-cover-16x9.png)
 
 [![CI](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml/badge.svg)](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-413%20passing-brightgreen.svg)](#verification)
+[![Tests](https://img.shields.io/badge/tests-568%20passing-brightgreen.svg)](#verification)
+
+
+<table>
+<tr>
+<td width="50%"><img src="./assets/screenshots/12-polish-inplay.png" alt="A game in progress: the board flanked by clock and captured-piece rails, with the voice transcript beside it."></td>
+<td width="50%"><img src="./assets/screenshots/14-settings-menu.png" alt="The settings menu open, showing difficulty, time control, play mode, board theme and accessibility options."></td>
+</tr>
+<tr>
+<td width="50%"><img src="./assets/screenshots/09-blindfold.png" alt="Blindfold mode with the board hidden, played entirely by voice."></td>
+<td width="50%"><img src="./assets/screenshots/05-high-contrast.png" alt="High-contrast AAA theme."></td>
+</tr>
+</table>
+
+[Pitch deck (PDF)](./assets/deck/VoiceChessmate_Pitch_Deck.pdf) · [Submission copy](./assets/submission/SUBMISSION.md)
 
 ---
 
@@ -117,7 +132,7 @@ gaplessly, with barge-in support so you can interrupt the coach mid-sentence.
   │  Microphone│ ───────────────► │  AssemblyAI          │
   │ AudioWorklet│   WebSocket     │  Voice Agent API     │
   └────────────┘                  │  ┌────────────────┐  │
-                                  │  │ Universal-3 Pro│  │  STT
+                                  │  │ Streaming STT  │  │
   ┌────────────┐   agent audio    │  │ LLM routing    │  │
   │  Speaker   │ ◄─────────────── │  │ Voice output   │  │
   │ 48kHz ctx  │                  │  └────────────────┘  │
@@ -223,7 +238,7 @@ reliable `AudioWorklet` and microphone support.
 ## Verification
 
 ```bash
-npm test              # 413 tests across 19 files
+npm test              # 568 tests across 27 files
 npx tsc --noEmit      # strict typecheck
 npm run lint
 npm run build
@@ -268,13 +283,13 @@ confidently wrong answer is the failure mode that matters:
 |-------|-----------|
 | Framework | Next.js 16 (App Router, Turbopack) |
 | Language | TypeScript, strict mode |
-| Voice | AssemblyAI Voice Agent API — Universal-3 Pro STT, WebSocket, PCM16 |
+| Voice | AssemblyAI Voice Agent API — streaming STT, TTS, turn detection, tool calling over WebSocket, PCM16 |
 | Chess rules | chess.js |
 | Engine | Minimax with alpha-beta pruning, 4 difficulty levels |
 | Auth & data | Supabase — magic-link auth, Postgres, row level security |
 | Audio | Web Audio API — dual AudioContext, AudioWorklet |
 | Styling | Tailwind CSS |
-| Tests | Vitest — 413 tests, 19 files |
+| Tests | Vitest — 568 tests, 27 files |
 | Hosting | Vercel |
 
 ## License

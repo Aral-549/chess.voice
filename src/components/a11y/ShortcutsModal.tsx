@@ -12,6 +12,7 @@ const SHORTCUTS: [string, string][] = [
   ["W", "Why? — have the coach explain the last move played"],
   ["K", "Clock — hear both players' remaining time"],
   ["D", "Spatial scan — systematic Rank 1 to Rank 8 occupied squares"],
+  ["G", "Glance — one-breath tactical read of the position"],
   ["B", "Show or hide the visual board"],
   ["F", "Flip board perspective (White / Black)"],
   ["I", "Open official FIDE / IBCA Phonetic Notation Guide"],

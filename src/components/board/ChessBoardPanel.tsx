@@ -2,7 +2,7 @@
 
 import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 import type { TimeControlMode } from "@/hooks/useChessClock";
@@ -36,6 +36,11 @@ interface ChessBoardPanelProps {
   isGameOver?: boolean;
   clock?: ChessClockState;
   difficulty?: Difficulty;
+  /** Controlled board orientation. Omit to keep the panel's own local state —
+   *  the flip button still works either way. Lifted so the F shortcut and the
+   *  `control_board` voice tool can both drive it. */
+  flipped?: boolean;
+  onFlippedChange?: (flipped: boolean) => void;
 }
 
 /**
@@ -61,8 +66,20 @@ export function ChessBoardPanel({
   isGameOver = false,
   clock,
   difficulty = "intermediate",
+  flipped: flippedProp,
+  onFlippedChange,
 }: ChessBoardPanelProps) {
-  const [flipped, setFlipped] = useState(false);
+  // Controlled when the parent passes `flipped`, uncontrolled otherwise, so
+  // this stays a drop-in for any caller that does not care about orientation.
+  const [flippedLocal, setFlippedLocal] = useState(false);
+  const flipped = flippedProp ?? flippedLocal;
+  const setFlipped = useCallback(
+    (next: boolean) => {
+      setFlippedLocal(next);
+      onFlippedChange?.(next);
+    },
+    [onFlippedChange],
+  );
 
   // Derive turn from FEN
   const isWhiteTurn = useMemo(() => {
@@ -118,7 +135,7 @@ export function ChessBoardPanel({
           {visible && (
             <button
               type="button"
-              onClick={() => setFlipped((f) => !f)}
+              onClick={() => setFlipped(!flipped)}
               title="Flip board perspective"
               className="rounded-full border border-border/80 bg-bg/60 px-2 sm:px-2.5 py-0.5 text-[11px] font-medium text-fg-muted backdrop-blur-md transition-all hover:border-accent hover:text-accent cursor-pointer active:scale-95"
             >

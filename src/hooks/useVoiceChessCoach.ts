@@ -654,6 +654,16 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
 
   const undoMove = useCallback(() => runTool("undo_move"), [runTool]);
 
+  /** H — a tactical hint from the engine. The `get_hint` tool has existed since
+   *  the first version; until now there was no keyboard route to it, even
+   *  though the shortcuts modal advertised one. See BUGLOG 2026-09-24. */
+  const getHint = useCallback(() => runTool("get_hint"), [runTool]);
+
+  /** F — flip the board. Routed through `control_board` rather than flipping
+   *  the view directly, so the move is spoken like any other board change and a
+   *  player who cannot see the flip still hears that it happened. */
+  const flipBoard = useCallback(() => runTool("control_board", { action: "flip" }), [runTool]);
+
   return {
     isVoiceSupported,
     voiceError,
@@ -681,6 +691,8 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
     changePlayMode,
     announceTime,
     undoMove,
+    getHint,
+    flipBoard,
     resetGame,
     difficulty,
     setDifficulty,

@@ -12,6 +12,7 @@ import { TextFallbackForm } from "@/components/voice/TextFallbackForm";
 import { ChessBoardPanel } from "@/components/board/ChessBoardPanel";
 import { SettingsMenu } from "@/components/a11y/SettingsMenu";
 import { ShortcutsModal } from "@/components/a11y/ShortcutsModal";
+import { IBCAGuideModal } from "@/components/a11y/IBCAGuideModal";
 import { GameOverModal } from "@/components/a11y/GameOverModal";
 import { AccountPanel } from "@/components/account/AccountPanel";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,10 @@ export default function Home() {
     onBoardAction: (action) => {
       if (action === "show" && !settings.boardVisible) toggleBoardVisible();
       else if (action === "hide" && settings.boardVisible) toggleBoardVisible();
+      // "flip" was declared in the callback's type and then silently dropped
+      // here, so the control_board voice tool reported a flip that never
+      // happened. See BUGLOG 2026-09-24.
+      else if (action === "flip") setBoardFlipped((f) => !f);
     },
     onModeAction: (mode, boardHidden) => {
       setPlayMode(mode);
@@ -54,6 +59,7 @@ export default function Home() {
   const [gameOverDismissed, setGameOverDismissed] = useState(false);
   const [playMode, setPlayMode] = useState<"normal" | "blindfold" | "handsfree">("normal");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [boardFlipped, setBoardFlipped] = useState(false);
 
   /** Conversation column width. Read after mount, never during render, so the
    *  server and first client render agree — see BUGLOG 2026-09-16. */
@@ -178,6 +184,7 @@ export default function Home() {
   }, [coach.isGameOver, gameOverSoundPlayedRef]);
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [ibcaOpen, setIbcaOpen] = useState(false);
   const [isHoldingJ, setIsHoldingJ] = useState(false);
 
   useA11yFeedback(coach.status, coach.caption, {
@@ -202,6 +209,17 @@ export default function Home() {
         coach.cancelListening();
       },
       r: () => coach.repeatLast(),
+      // H, F, I and 1-4 were advertised in the shortcuts modal and bound
+      // nowhere — the comment below even described 1-4 as difficulty keys
+      // above code that bound only 5-9. keyboard-contract.test.ts now fails
+      // if the advertised set and the bound set drift apart again.
+      h: () => coach.getHint(),
+      f: () => coach.flipBoard(),
+      i: () => setIbcaOpen((v) => !v),
+      "1": () => coach.setDifficulty("beginner"),
+      "2": () => coach.setDifficulty("intermediate"),
+      "3": () => coach.setDifficulty("advanced"),
+      "4": () => coach.setDifficulty("master"),
       d: () => coach.describeBoard("full"),
       t: () => coach.describeBoard("threats"),
       g: () => coach.describeBoard("tactical"),
@@ -229,7 +247,7 @@ export default function Home() {
       "=": () => cycleFontScale(1),
       "-": () => cycleFontScale(-1),
     },
-    !shortcutsOpen,
+    !shortcutsOpen && !ibcaOpen,
   );
 
   return (
@@ -280,6 +298,10 @@ export default function Home() {
               onToggleAnnounceCaptions={toggleAnnounceCaptions}
               onCycleFontScale={cycleFontScale}
               onSetTheme={setTheme}
+              onOpenIBCAGuide={() => {
+                setSettingsOpen(false);
+                setIbcaOpen(true);
+              }}
               difficulty={coach.difficulty}
               onSelectDifficulty={coach.setDifficulty}
               timeControl={coach.clock?.mode}
@@ -387,6 +409,8 @@ export default function Home() {
               isGameOver={coach.isGameOver}
               clock={coach.clock}
               difficulty={coach.difficulty}
+              flipped={boardFlipped}
+              onFlippedChange={setBoardFlipped}
             />
           </div>
           <p className="flex-shrink-0 mt-1 text-[11px] text-fg-muted text-center">
@@ -414,6 +438,21 @@ export default function Home() {
       )}
 
       {shortcutsOpen && <ShortcutsModal onClose={() => setShortcutsOpen(false)} />}
+
+      {/* The phonetic guide has existed, finished, since early on: pronunciation,
+          history, worked examples. Nothing imported it, and all three advertised
+          routes to it (the I key, the Settings item, the shortcuts list) were
+          dead. `onTryCommand` runs the example through the same text path the
+          fallback box uses, so "try saying Eva 4" actually plays the move. */}
+      {ibcaOpen && (
+        <IBCAGuideModal
+          onClose={() => setIbcaOpen(false)}
+          onTryCommand={(cmd) => {
+            setIbcaOpen(false);
+            coach.submitTextFallback(cmd);
+          }}
+        />
+      )}
     </div>
   );
 }

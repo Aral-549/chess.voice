@@ -8,6 +8,76 @@ Entries are newest first.
 
 ---
 
+## 2026-09-24 — Four advertised keyboard shortcuts did nothing
+
+Found by auditing the project against its own documentation while planning the
+hackathon submission, not by using it — pressing H and hearing silence is
+indistinguishable from the coach having nothing to say.
+
+- **Symptom:** `ShortcutsModal` advertised **H** (tactical hint), **F** (flip
+  board), **I** (IBCA phonetic guide) and **1-4** (difficulty). None of the four
+  were bound in the `useHotkeys` map in `app/page.tsx`. Pressing them did
+  nothing at all, silently.
+- **Root cause:** three separate drifts, all in the same direction — the promise
+  was written and the binding never was:
+  1. The hotkey map carried the comment *"Shift is not required: 1-4 are
+     difficulty, 5-9 are the clock"* directly above code that bound only 5-9.
+     The comment described behaviour that had never existed.
+  2. `IBCAGuideModal.tsx` — a finished explainer with pronunciation, IBCA
+     history and worked examples — had **zero importers**. All three advertised
+     routes to it (the I key, the Settings item gated behind an
+     `onOpenIBCAGuide` prop `page.tsx` never passed, and the shortcuts list)
+     pointed at nothing.
+  3. `onBoardAction` declared `"flip"` in its type and then handled only
+     `show`/`hide`, so the `control_board` voice tool announced a flip that
+     never happened — the narration was lying, which is worse than silence for
+     a player who cannot see the board.
+- **Stage/module:** `app/page.tsx` (hotkey map, board-action handler),
+  `components/a11y/ShortcutsModal.tsx`, `components/a11y/IBCAGuideModal.tsx`
+- **Why nothing caught it:** the promise and the binding live in different
+  files, and nothing compared them. 562 tests passed throughout.
+- **Fix:** bound all four; added `getHint()` and `flipBoard()` to the coach hook
+  routed through the existing `get_hint` / `control_board` tools so a flip is
+  spoken like any other board change; lifted board orientation into `page.tsx`
+  so the keyboard, the voice tool and the on-screen button drive one state;
+  documented **G** (tactical glance), which was bound but undocumented.
+- **Regression case added:** `src/lib/__tests__/keyboard-contract.test.ts` —
+  parses the advertised keys out of `ShortcutsModal` and the bound keys out of
+  `page.tsx` and asserts the sets match, in both directions, with an explicit
+  allowlist for the `=` alias. Verified to fail, naming all seven missing keys,
+  when the bindings are removed; a second case catches 1-4 being bound to the
+  wrong difficulty levels, which would otherwise pass while still misleading.
+- **Verified live:** against the production build — I opens the guide with focus
+  trapped and Escape restoring it, H announces *"I'd suggest knight to Cesar 3"*,
+  F actually inverts the board (checked by comparing the rendered positions of
+  a1 and a8, not by trusting the narration) and stays in sync with the on-screen
+  Flip button, and 1/2/4 announce beginner/intermediate/master.
+- **Status:** verified
+
+---
+
+## 2026-09-24 — README made three claims a judge could check and disprove
+
+- **Symptom:** the README advertised a **live demo URL belonging to a different
+  hackathon's deployment**, a test badge reading "413 passing" against an actual
+  568, and "Universal-3 Pro STT" in both the architecture diagram and the tech
+  stack table.
+- **Root cause:** the counts were never updated as suites were added. The model
+  name was aspirational: `grep -rn "Universal-3\|speech_model" src/` returns
+  nothing — the Voice Agent API is opened with no model selection at all, so it
+  uses whatever the service defaults to. The URL was inherited from the repo
+  this project was branched from.
+- **Stage/module:** `README.md`
+- **Fix:** removed the foreign live-demo link rather than guessing a URL that
+  does not exist yet; corrected the counts; replaced the model claim with what
+  the code actually configures (streaming STT, TTS, turn detection and tool
+  calling over WebSocket). Moved `assets/` into the repo and put the cover and
+  four screenshots above the fold, so the GitHub page shows the product.
+- **Note:** no regression case. This is documentation drift, not a code defect,
+  and a test asserting a number in a badge would be pinning trivia. The test
+  count is now checked by nothing — if it drifts again it is cosmetic.
+- **Status:** fixed
+
 ## 2026-09-23 — announce() announced nothing, app-wide
 
 The most serious bug found in this project so far, and it had been there the
