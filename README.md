@@ -8,7 +8,7 @@ Built on the [AssemblyAI Voice Agent API](https://www.assemblyai.com/docs/voice-
 
 [![CI](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml/badge.svg)](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-568%20passing-brightgreen.svg)](#verification)
+[![Tests](https://img.shields.io/badge/tests-580%20passing-brightgreen.svg)](#verification)
 
 
 <table>
@@ -238,7 +238,7 @@ reliable `AudioWorklet` and microphone support.
 ## Verification
 
 ```bash
-npm test              # 568 tests across 27 files
+npm test              # 580 tests across 28 files
 npx tsc --noEmit      # strict typecheck
 npm run lint
 npm run build
@@ -289,7 +289,7 @@ confidently wrong answer is the failure mode that matters:
 | Auth & data | Supabase — magic-link auth, Postgres, row level security |
 | Audio | Web Audio API — dual AudioContext, AudioWorklet |
 | Styling | Tailwind CSS |
-| Tests | Vitest — 568 tests, 27 files |
+| Tests | Vitest — 580 tests, 28 files |
 | Hosting | Vercel |
 
 ## License

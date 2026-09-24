@@ -8,6 +8,38 @@ Entries are newest first.
 
 ---
 
+## 2026-09-24 — First-run intro failed the two users it was written for
+
+The intro itself was new work; these are the defects an adversarial pass over it
+found, both by driving the production build rather than by re-reading the code.
+
+- **Symptom 1:** in a private window — or anywhere site data is blocked — a
+  brand-new user got **no tutorial at all**. Verified by overriding the
+  `localStorage` getter to throw: the dialog never appeared.
+- **Root cause 1:** `hasSeenFirstRun()` returned `true` whenever storage threw,
+  on the reasoning that it was safer not to trap someone in a tutorial they
+  could not dismiss. That is backwards. A private window is exactly what
+  somebody evaluating an unfamiliar app opens, so the rule silenced the
+  onboarding for the audience most likely to need it. Now the "seen" flag falls
+  back to module-level memory: shown once per page load, never twice in a
+  session, and a failed write costs a repeat rather than a silence.
+- **Symptom 2:** advancing a step threw the keyboard user off the Next button.
+  Playwright, Tab-and-Enter only: `Next` → focus `"Why the coach says Eva 4"`
+  (the heading), so reaching Next again meant Tabbing back, three times in a
+  three-step tutorial.
+- **Root cause 2:** the step effect called `headingRef.current?.focus()`.
+  Moving focus to new dialog content is the textbook pattern, but the same
+  effect already pushes the full step text through the polite live region, so
+  the focus move bought nothing and cost the whole point of a keyboard-first
+  intro. Announcement kept, focus move removed. After the fix the same run
+  reads `Next` → `Next` → `Start playing`: three presses, no Tabbing.
+- **Stage/module:** `components/onboarding/FirstRun.tsx`
+- **Regression case added:** `src/lib/__tests__/first-run.test.ts` — 12 cases.
+  The storage rules are exercised against a fake `window` whose `localStorage`
+  getter throws; the focus rule is a source guard, since this project has no
+  jsdom. Both verified to fail when reverted.
+- **Status:** verified
+
 ## 2026-09-24 — Four advertised keyboard shortcuts did nothing
 
 Found by auditing the project against its own documentation while planning the

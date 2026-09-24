@@ -49,6 +49,7 @@ interface SettingsMenuProps {
 
   onOpenShortcuts: () => void;
   onOpenIBCAGuide?: () => void;
+  onReplayIntro?: () => void;
 }
 
 const DIFFICULTIES: { id: Difficulty; label: string; rating: string; key: string }[] = [
@@ -265,6 +266,9 @@ export function SettingsMenu(props: SettingsMenuProps) {
               <MenuButton label="Keyboard shortcuts" shortcut="?" onClick={props.onOpenShortcuts} />
               {props.onOpenIBCAGuide && (
                 <MenuButton label="IBCA phonetic guide" shortcut="I" onClick={props.onOpenIBCAGuide} />
+              )}
+              {props.onReplayIntro && (
+                <MenuButton label="Show the intro again" onClick={props.onReplayIntro} />
               )}
             </Group>
           </div>

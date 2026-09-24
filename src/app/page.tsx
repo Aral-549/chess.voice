@@ -13,6 +13,7 @@ import { ChessBoardPanel } from "@/components/board/ChessBoardPanel";
 import { SettingsMenu } from "@/components/a11y/SettingsMenu";
 import { ShortcutsModal } from "@/components/a11y/ShortcutsModal";
 import { IBCAGuideModal } from "@/components/a11y/IBCAGuideModal";
+import { FirstRun, hasSeenFirstRun } from "@/components/onboarding/FirstRun";
 import { GameOverModal } from "@/components/a11y/GameOverModal";
 import { AccountPanel } from "@/components/account/AccountPanel";
 import { cn } from "@/lib/utils";
@@ -185,6 +186,14 @@ export default function Home() {
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [ibcaOpen, setIbcaOpen] = useState(false);
+
+  // Read after mount, never during render — reading localStorage in the first
+  // (server-matching) pass is the hydration mismatch logged 2026-09-16.
+  const [firstRunOpen, setFirstRunOpen] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!hasSeenFirstRun()) setFirstRunOpen(true);
+  }, []);
   const [isHoldingJ, setIsHoldingJ] = useState(false);
 
   useA11yFeedback(coach.status, coach.caption, {
@@ -247,7 +256,7 @@ export default function Home() {
       "=": () => cycleFontScale(1),
       "-": () => cycleFontScale(-1),
     },
-    !shortcutsOpen && !ibcaOpen,
+    !shortcutsOpen && !ibcaOpen && !firstRunOpen,
   );
 
   return (
@@ -279,7 +288,7 @@ export default function Home() {
               ♔ VoiceChessmate
             </h1>
             {!inPlay && (
-              <p className="hidden sm:block text-xs text-fg-muted whitespace-nowrap">Hold J to speak</p>
+              <p className="text-xs text-fg-muted whitespace-nowrap">Hold J to speak</p>
             )}
           </div>
 
@@ -301,6 +310,10 @@ export default function Home() {
               onOpenIBCAGuide={() => {
                 setSettingsOpen(false);
                 setIbcaOpen(true);
+              }}
+              onReplayIntro={() => {
+                setSettingsOpen(false);
+                setFirstRunOpen(true);
               }}
               difficulty={coach.difficulty}
               onSelectDifficulty={coach.setDifficulty}
@@ -444,6 +457,13 @@ export default function Home() {
           routes to it (the I key, the Settings item, the shortcuts list) were
           dead. `onTryCommand` runs the example through the same text path the
           fallback box uses, so "try saying Eva 4" actually plays the move. */}
+      {firstRunOpen && (
+        <FirstRun
+          onClose={() => setFirstRunOpen(false)}
+          onTryCommand={(cmd) => coach.submitTextFallback(cmd)}
+        />
+      )}
+
       {ibcaOpen && (
         <IBCAGuideModal
           onClose={() => setIbcaOpen(false)}
