@@ -50,6 +50,17 @@ export class AssemblyAIVoiceEngine implements VoiceEngine {
     this.agent.on('*', (event) => this.route(event as Record<string, unknown>));
   }
 
+  /** Turn-latency ledger. See contracts/latency-measurement.md. */
+  get latency() {
+    return this.agent.latency;
+  }
+
+  /** Tell the ledger the board has changed. Called by the game layer, which is
+   *  the only place that knows a move landed rather than was merely requested. */
+  markMoveApplied(): void {
+    this.agent.markMoveApplied();
+  }
+
   /** True once the WebSocket session is live and tools can be invoked. */
   get isLive(): boolean {
     return this.connected;

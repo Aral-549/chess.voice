@@ -8,6 +8,32 @@ Entries are newest first.
 
 ---
 
+## 2026-09-24 — The voice pipeline logged nothing at its stage boundaries
+
+Not a defect report so much as a standing violation of AGENTS.md rule 5, found
+while building the latency instrumentation.
+
+- **Symptom:** a slow turn was untraceable. The path from a player speaking to
+  the board changing crosses five boundaries — speech end, final transcript,
+  tool call, move applied, first reply audio — and none of them emitted
+  anything structured. "It felt slow" could not be attributed to a stage.
+- **Root cause:** the pipeline logged with ad-hoc `console.log` strings
+  (`[VoiceAgent] Sent silence burst to finalize turn`) rather than structured
+  records. Rule 5 exists precisely so a scattered delay is traceable to a stage
+  instead of "somewhere in the app", and the most latency-sensitive path in the
+  project was the one not following it.
+- **Stage/module:** `lib/voice-agent.ts`, all five boundaries
+- **Fix:** `stageLatency()` emits one JSON object per boundary with the turn id
+  and a monotonic timestamp. `scripts/latency-report.mjs` reconstructs per-turn
+  intervals from a saved console log, so the same records that make a bug
+  traceable also produce the published figures.
+- **Regression case added:** none as such — this is new instrumentation, and
+  `latency.test.ts` (32 cases) covers the ledger it feeds, including five
+  mutation checks. The most important of those is that a turn with no move is
+  never counted as a 0 ms move, which would have quietly flattered the headline
+  number in a published report.
+- **Status:** fixed
+
 ## 2026-09-24 — First-run intro failed the two users it was written for
 
 The intro itself was new work; these are the defects an adversarial pass over it

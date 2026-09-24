@@ -14,6 +14,7 @@ import { SettingsMenu } from "@/components/a11y/SettingsMenu";
 import { ShortcutsModal } from "@/components/a11y/ShortcutsModal";
 import { IBCAGuideModal } from "@/components/a11y/IBCAGuideModal";
 import { FirstRun, hasSeenFirstRun } from "@/components/onboarding/FirstRun";
+import { LatencyReadout } from "@/components/voice/LatencyReadout";
 import { GameOverModal } from "@/components/a11y/GameOverModal";
 import { AccountPanel } from "@/components/account/AccountPanel";
 import { cn } from "@/lib/utils";
@@ -61,6 +62,7 @@ export default function Home() {
   const [playMode, setPlayMode] = useState<"normal" | "blindfold" | "handsfree">("normal");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [boardFlipped, setBoardFlipped] = useState(false);
+  const [latencyVisible, setLatencyVisible] = useState(false);
 
   /** Conversation column width. Read after mount, never during render, so the
    *  server and first client render agree — see BUGLOG 2026-09-16. */
@@ -225,6 +227,15 @@ export default function Home() {
       h: () => coach.getHint(),
       f: () => coach.flipBoard(),
       i: () => setIbcaOpen((v) => !v),
+      // L shows the turn-latency readout and speaks the current figure once.
+      // Showing it is also how a screen reader user asks for the number, so the
+      // announcement fires on the way in, not on every turn.
+      l: () => {
+        setLatencyVisible((v) => {
+          if (!v) coach.announceLatency();
+          return !v;
+        });
+      },
       "1": () => coach.setDifficulty("beginner"),
       "2": () => coach.setDifficulty("intermediate"),
       "3": () => coach.setDifficulty("advanced"),
@@ -396,6 +407,7 @@ export default function Home() {
           />
           {/* Emphasised whenever typing is the only way through — the browser
               never supported voice, or this session's attempt failed. */}
+          <LatencyReadout ledger={coach.latency} visible={latencyVisible} />
           <TextFallbackForm
             onSubmit={coach.submitTextFallback}
             emphasized={!coach.isVoiceSupported || coach.voiceError !== null}

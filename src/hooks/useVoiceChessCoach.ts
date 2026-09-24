@@ -20,6 +20,7 @@ import {
 } from "@/lib/sound-effects";
 import { useChessClock, type TimeControlMode } from "@/hooks/useChessClock";
 import { spokenClock } from "@/lib/clock-speech";
+import { describeLatency } from "@/lib/latency";
 import type { Difficulty } from "@/types";
 
 export type TranscriptEntry = {
@@ -421,7 +422,14 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
       try {
         const parsed = JSON.parse(result);
         if (name === "apply_move" || name === "validate_and_play_move") {
-          if (parsed.success) soundLastMove();
+          if (parsed.success) {
+            soundLastMove();
+            // The board has actually changed — this, not the tool call, is the
+            // moment the player stopped waiting. Marked here because this is
+            // the only place that knows the move landed rather than being
+            // requested and then rejected by the confidence gate.
+            engine.markMoveApplied();
+          }
         }
         dispatchToolSideEffects(parsed, name);
         const spoken = parsed.narration ?? parsed.description ?? parsed.explanation;
@@ -654,6 +662,13 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
 
   const undoMove = useCallback(() => runTool("undo_move"), [runTool]);
 
+  /** Speak the latency on demand. Never announced automatically — a number
+   *  after every move would bury what the opponent actually played. */
+  const announceLatency = useCallback(() => {
+    const line = describeLatency(engine.latency.summary(), engine.latency.lastWithMove() ?? engine.latency.last());
+    announce(line ?? "No turns measured yet. Speak a move first.");
+  }, [engine]);
+
   /** H — a tactical hint from the engine. The `get_hint` tool has existed since
    *  the first version; until now there was no keyboard route to it, even
    *  though the shortcuts modal advertised one. See BUGLOG 2026-09-24. */
@@ -691,6 +706,8 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
     changePlayMode,
     announceTime,
     undoMove,
+    latency: engine.latency,
+    announceLatency,
     getHint,
     flipBoard,
     resetGame,

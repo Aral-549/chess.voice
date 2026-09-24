@@ -18,6 +18,7 @@ const SHORTCUTS: [string, string][] = [
   ["I", "Open official FIDE / IBCA Phonetic Notation Guide"],
   ["1 - 4", "Coach difficulty (1: Beginner, 2: Inter, 3: Adv, 4: Master)"],
   ["5 - 9", "Time control (5: Casual, 6: 1m, 7: 3m, 8: 5m, 9: 10m)"],
+  ["L", "Latency — show and speak how long the last turn took"],
   ["S", "Open or close the settings menu"],
   ["Tab to divider, ← →", "Resize the conversation panel (Shift for bigger steps, Home/End for min/max)"],
   ["C", "Toggle high-contrast AAA mode"],

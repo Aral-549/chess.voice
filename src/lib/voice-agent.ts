@@ -21,6 +21,7 @@
 
 import type { SessionConfig, VoiceAgentEvent } from '@/types';
 import { VoiceAgentError, describeMicError, describeTokenError } from '@/lib/voice-errors';
+import { LatencyLedger, stageLatency } from '@/lib/latency';
 
 const AGENT_WS_URL = 'wss://agents.assemblyai.com/v1/ws';
 const CAPTURE_SAMPLE_RATE = 24_000; // AssemblyAI Voice Agent requires 24kHz input
@@ -84,6 +85,15 @@ export class VoiceAgentManager {
 
   private status: VoiceAgentStatus = 'disconnected';
   private isListeningActive = false;
+
+  // --- Turn latency (contracts/latency-measurement.md) ---
+  // Marks are taken here because this is where the socket events land. The
+  // ledger itself does no timing; it is a pure ledger so the arithmetic can be
+  // tested without a connection.
+  readonly latency = new LatencyLedger();
+  /** The turn currently being measured, or null between turns. */
+  private currentTurnId: string | null = null;
+  private turnCounter = 0;
   private isMuted = false;
   private eventHandlers: Map<string, EventHandler[]> = new Map();
   private statusHandlers: ((status: VoiceAgentStatus) => void)[] = [];
@@ -147,6 +157,16 @@ export class VoiceAgentManager {
         this.sendEvent({ type: 'input.audio', audio: base64 });
       }
       console.log('[VoiceAgent] Sent silence burst to finalize turn');
+    }
+
+    // Start measuring here: from the player's point of view this is the moment
+    // they stopped and began waiting. Under push-to-talk it is a human decision
+    // rather than an endpointing measurement, which the contract says must be
+    // stated wherever these numbers are published.
+    if (wasListening && !active) {
+      this.currentTurnId = `turn-${++this.turnCounter}`;
+      this.latency.mark(this.currentTurnId, 'speechEnd', performance.now());
+      stageLatency('speech.end', this.currentTurnId);
     }
 
     if (this.status !== 'disconnected' && this.status !== 'connecting' && this.status !== 'error') {
@@ -279,6 +299,10 @@ export class VoiceAgentManager {
       const { token } = tokenPayload;
       this.ledgerId = tokenPayload.ledgerId ?? null;
       this.sessionStartedAt = Date.now();
+      // performance.now() is monotonic within a document but means nothing
+      // across a reconnect, and mixing the two would produce nonsense.
+      this.latency.reset();
+      this.currentTurnId = null;
 
       // ── 4. Connect via WebSocket with token ──────────────────────────────
       this.ws = new WebSocket(`${AGENT_WS_URL}?token=${token}`);
@@ -338,8 +362,62 @@ export class VoiceAgentManager {
 
   // --- Server Event Handling ---
 
+  /**
+   * Take latency marks off the raw event stream.
+   *
+   * Deliberately separate from the behaviour switch below: measurement must
+   * never change what the agent does, and reading it next to the audio
+   * scheduling would invite exactly that.
+   */
+  private markLatency(event: VoiceAgentEvent): void {
+    const turnId = this.currentTurnId;
+    if (!turnId) return; // nothing is being measured between turns
+
+    const type = String(event.type ?? '');
+    const now = performance.now();
+
+    if (type.startsWith('transcript.user')) {
+      // Mirrors the finality rule the engine uses, so the mark and the
+      // transcript the player sees refer to the same moment.
+      const e = event as unknown as Record<string, unknown>;
+      const isFinal = !type.endsWith('.delta') || !!(e.end_of_turn || e.is_final || e.final);
+      if (isFinal) {
+        this.latency.mark(turnId, 'transcriptFinal', now);
+        stageLatency('transcript.final', turnId);
+      }
+      return;
+    }
+
+    if (type === 'reply.audio') {
+      // Chunked — the ledger keeps the first, which is when the player
+      // actually started hearing an answer.
+      this.latency.mark(turnId, 'firstReplyAudio', now);
+      stageLatency('reply.audio.first', turnId);
+      return;
+    }
+
+    // Tool calls have no single event name across SDK versions; they are
+    // identified the same way the engine identifies them, by shape.
+    const e = event as unknown as Record<string, unknown>;
+    const callId = e.call_id ?? e.tool_call_id ?? e.id;
+    const name = e.name ?? e.function_name;
+    if (callId && name) {
+      this.latency.mark(turnId, 'toolCall', now);
+      stageLatency('tool.call', turnId, { tool: String(name) });
+    }
+  }
+
+  /** The board changed. Marked from the game layer, which is the only place
+   *  that knows a move actually landed rather than merely being requested. */
+  markMoveApplied(): void {
+    if (!this.currentTurnId) return;
+    this.latency.mark(this.currentTurnId, 'moveApplied', performance.now());
+    stageLatency('move.applied', this.currentTurnId);
+  }
+
   private async handleServerEvent(event: VoiceAgentEvent): Promise<void> {
     this.emit(event.type, event);
+    this.markLatency(event);
 
     switch (event.type) {
       case 'session.ready':
