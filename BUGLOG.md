@@ -8,6 +8,46 @@ Entries are newest first.
 
 ---
 
+## 2026-09-30 — The chessboard was thirty-two anonymous tab stops
+
+Found by running axe-core against the production build. It had been there from
+the first commit, in every state of the app.
+
+- **Symptom:** `aria-command-name` (serious) on 32 nodes, in all five states
+  tested. Every piece is wrapped by react-chessboard in
+  `role="button" tabindex="0"` with no accessible name. Measured with
+  Playwright: a screen reader announces thirty-two anonymous "button"s, and a
+  keyboard user crossing the board hits thirty-two dead tab stops.
+- **Root cause:** the drag layer is a pointer affordance that the library also
+  puts in the keyboard path. The project never overrode it. In an app whose
+  claim is "no screen, no mouse, no sighted help", the board was the least
+  accessible thing on the page, and it is the first thing any reviewer running
+  an accessibility check would find.
+- **Stage/module:** `components/board/ChessBoardPanel.tsx`
+- **Fix:** an effect keyed on `fen` takes the drag nodes out of the tab order
+  and gives each a real name in IBCA — "White pawn on Eva 4" — so a screen
+  reader navigating by element gets the same vocabulary the coach speaks. A
+  MutationObserver reapplies it, because the library rebuilds those nodes on
+  drag and hover and would otherwise restore the unnamed originals. The
+  keyboard and screen-reader path remains what it always was: voice, D, G, T
+  and the transcript.
+- **Also fixed in the same pass:** two `color-contrast` failures below WCAG AA
+  — `text-fg-muted/70` on every shortcut hint in the settings menu, and
+  `text-fg-muted/60` on the captured-piece rails. Alpha applied to an already
+  muted token fell under the threshold at 11px; the full token passes. Shipping
+  a "high-contrast AAA mode" while failing AA by default is a claim the product
+  cannot support.
+- **Verified live:** axe-core over the production build, five states (board,
+  first-run intro, settings open, high-contrast theme, 390px phone):
+  **0 violations, 0 console errors**, down from 2 violation types in every
+  state. 32 pieces, 0 in the tab order, 0 unnamed; labels follow the piece
+  after a move (e4 reads "White pawn on Eva 4", e2 becomes empty).
+- **Regression case added:** `src/lib/__tests__/board-accessibility.test.ts` —
+  6 cases, including that the effect stays keyed on `fen` and that the
+  MutationObserver survives, since without it the fix lapses the first time
+  anyone touches a piece.
+- **Status:** verified
+
 ## 2026-09-24 — The voice pipeline logged nothing at its stage boundaries
 
 Not a defect report so much as a standing violation of AGENTS.md rule 5, found

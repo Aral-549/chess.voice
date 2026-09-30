@@ -104,7 +104,7 @@ export function PlayerRail({
             {thinking ? "Thinking…" : "To play"}
           </span>
         ) : (
-          <span className="text-fg-muted/70">Waiting</span>
+          <span className="text-fg-muted">Waiting</span>
         )}
       </div>
 
@@ -127,7 +127,7 @@ export function PlayerRail({
           )}
         >
           {captured.length === 0 ? (
-            <span className="text-[11px] leading-normal text-fg-muted/60">None</span>
+            <span className="text-[11px] leading-normal text-fg-muted">None</span>
           ) : (
             captured.map((piece, i) => <span key={`${piece}-${i}`}>{PIECE_GLYPH[piece]}</span>)
           )}

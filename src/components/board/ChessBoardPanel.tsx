@@ -2,12 +2,13 @@
 
 import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 import type { TimeControlMode } from "@/hooks/useChessClock";
 import { PlayerRail } from "./PlayerRail";
 import { capturedFromFen } from "@/lib/captured";
+import { squareToIBCA } from "@/lib/chess-engine";
 import type { Difficulty } from "@/types";
 
 export interface ChessClockState {
@@ -90,6 +91,61 @@ export function ChessBoardPanel({
   // Derived from the FEN so it cannot drift from the board across resume,
   // undo or replay.
   const captured = useMemo(() => capturedFromFen(fen), [fen]);
+
+  // --- The drag layer is a mouse affordance, not a keyboard one -------------
+  //
+  // react-chessboard wraps every piece in `role="button" tabindex="0"` with no
+  // accessible name. axe-core flags it (aria-command-name, serious), and the
+  // lived consequence is worse than the rule: a screen reader announced
+  // thirty-two anonymous "button"s, and a keyboard user crossing the board hit
+  // thirty-two dead tab stops. In an app whose whole claim is "no screen, no
+  // mouse, no sighted help", the board itself was the least accessible thing
+  // on the page. See BUGLOG 2026-09-30.
+  //
+  // The fix is not to make them nicer tab stops. Dragging a piece is a pointer
+  // gesture; the real keyboard and screen-reader path is voice plus D, G and T
+  // and the transcript. So they come out of the tab order — and they still get
+  // a real name, because an element reachable by any other means (a screen
+  // reader's element navigation, say) must never announce as bare "button".
+  //
+  // Done imperatively because the library owns this markup and exposes no prop
+  // for it. Re-runs on `fen` so a piece's name follows it as it moves.
+  const boardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = boardRef.current;
+    if (!root) return;
+
+    const PIECE_NAMES: Record<string, string> = {
+      p: "pawn", n: "knight", b: "bishop", r: "rook", q: "queen", k: "king",
+    };
+
+    const label = (square: string): string => {
+      try {
+        const piece = new Chess(fen).get(square as Parameters<Chess["get"]>[0]);
+        const spoken = squareToIBCA(square);
+        if (!piece) return `${spoken}, empty`;
+        const colour = piece.color === "w" ? "White" : "Black";
+        return `${colour} ${PIECE_NAMES[piece.type] ?? piece.type} on ${spoken}`;
+      } catch {
+        return squareToIBCA(square);
+      }
+    };
+
+    const apply = () => {
+      for (const node of root.querySelectorAll<HTMLElement>('[aria-roledescription="draggable"]')) {
+        node.setAttribute("tabindex", "-1");
+        const square = node.closest("[data-square]")?.getAttribute("data-square");
+        if (square) node.setAttribute("aria-label", label(square));
+      }
+    };
+
+    apply();
+    // The library re-renders the drag layer on its own (drag start, hover),
+    // which would restore the unnamed nodes, so keep watching while mounted.
+    const observer = new MutationObserver(apply);
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [fen]);
 
   const lastMoveSquares = useMemo(() => {
     if (moveHistory.length === 0) return {};
@@ -200,7 +256,9 @@ export function ChessBoardPanel({
                 board claim the full width and the rails overflowed the column
                 by 86px a side. Taking the remainder instead means the board
                 shrinks to make room for them. */}
-            <div className="relative flex flex-1 min-w-0 max-w-[min(calc(100vh-250px),560px)] xl:max-w-[min(calc(100vh-250px),640px)] items-center justify-center self-center">
+            {/* board-frame is box-shadow only - no border, no padding - so the
+                squares-exact geometry above is untouched. */}
+            <div ref={boardRef} className="board-frame relative flex flex-1 min-w-0 max-w-[min(calc(100vh-250px),560px)] xl:max-w-[min(calc(100vh-250px),640px)] items-center justify-center self-center">
             {/* Game over overlay — dims board and shows result */}
             {isGameOver && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl sm:rounded-2xl bg-black/50 backdrop-blur-sm pointer-events-none">

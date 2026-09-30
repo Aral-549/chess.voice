@@ -335,7 +335,7 @@ function Row({
         )}
       />
       <span className="flex-1 text-sm">{label}</span>
-      {hint && <span className="shrink-0 text-[11px] text-fg-muted/70">{hint}</span>}
+      {hint && <span className="shrink-0 text-[11px] text-fg-muted">{hint}</span>}
       {shortcut && (
         <kbd className="shrink-0 rounded border border-border px-1 font-mono text-[10px] text-fg-muted">
           {shortcut}

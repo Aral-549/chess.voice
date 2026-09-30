@@ -48,7 +48,10 @@ export function ListenButton({
   return (
     <div className="flex flex-col items-center gap-4 w-full">
       {/* Primary Voice Action Button */}
-      <div className="relative flex items-center justify-center">
+      <div
+        className="mic-halo relative flex items-center justify-center"
+        data-active={listening || connecting || speaking ? "true" : "false"}
+      >
         {/* Ambient audio glow ring */}
         {(connecting || listening || speaking) && (
           <div
@@ -100,7 +103,7 @@ export function ListenButton({
                   ? "border-accent-2 bg-bg-raised text-fg ring-4 ring-accent-2/30 scale-102"
                   : thinking
                     ? "border-accent/70 bg-bg-raised text-fg ring-2 ring-accent/20"
-                    : "border-border bg-bg-raised text-fg hover:border-accent hover:scale-102 hover:shadow-2xl active:scale-95",
+                    : "sheen overflow-hidden border-border bg-bg-raised text-fg hover:border-accent hover:scale-102 hover:shadow-2xl active:scale-95",
           )}
         >
           {/* Keyboard shortcut indicator pill */}
@@ -183,7 +186,7 @@ export function ListenButton({
 
       {/* Accessible Status Text & Micro Badges */}
       <div className="flex flex-col items-center gap-2">
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-bg-raised text-xs">
+        <div className="panel flex items-center gap-2 rounded-full px-3 py-1 text-xs">
           <span
             className={cn(
               "w-2 h-2 rounded-full",

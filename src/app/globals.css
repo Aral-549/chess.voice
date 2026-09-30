@@ -230,3 +230,194 @@ body {
     border-right: 1px solid var(--color-border);
   }
 }
+
+/* ============================================================
+   DEPTH AND CRAFT PASS
+   ============================================================
+   The palette above was already right — warm, low glare, AA-checked. What was
+   missing was depth: every surface sat on the same plane at the same weight,
+   so a careful colour system read as flat.
+
+   Everything here is additive decoration over that foundation. No layout
+   changes, so the board and rail geometry verified earlier still holds.
+
+   Two hard rules:
+   1. Nothing here may reduce contrast. Decoration goes behind or around text,
+      never over it, and the high-contrast theme strips it entirely.
+   2. Everything animated is already covered by the prefers-reduced-motion
+      block above, which zeroes animation and transition durations globally.
+   ============================================================ */
+
+:root {
+  /* Layered shadows read as real elevation; a single large blur reads as fog. */
+  --shadow-raised:
+    0 1px 2px oklch(0 0 0 / 0.30),
+    0 4px 12px oklch(0 0 0 / 0.22);
+  --shadow-float:
+    0 2px 4px oklch(0 0 0 / 0.32),
+    0 12px 32px oklch(0 0 0 / 0.30);
+  /* A hairline of light on the top edge — how a physical raised surface
+     catches ambient light. This is most of the "crafted" impression. */
+  --edge-light: inset 0 1px 0 oklch(1 0 0 / 0.055);
+}
+
+/* The page ground: a soft warm bloom behind the content rather than a flat
+   fill, plus a fine noise tooth so large dark areas do not band on cheap
+   panels. Both are fixed so they do not move when anything scrolls. */
+body {
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(
+      1100px 620px at 50% -12%,
+      oklch(from var(--color-accent) l c h / 0.055),
+      transparent 70%
+    ),
+    radial-gradient(
+      760px 520px at 108% 104%,
+      oklch(from var(--color-accent-2) l c h / 0.045),
+      transparent 68%
+    );
+  background-attachment: fixed;
+}
+
+/* Panels gain elevation and a lit top edge. */
+.panel {
+  box-shadow: var(--shadow-raised), var(--edge-light);
+}
+
+/* An elevated container for things that float above the page. */
+.panel-float {
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-raised);
+  box-shadow: var(--shadow-float), var(--edge-light);
+}
+
+/* The wordmark. A brass sheen across the letterforms — the one place the
+   accent is allowed to be decorative, because it names the product. */
+.wordmark {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-fg) 8%,
+    var(--color-accent) 48%,
+    var(--color-fg) 88%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* Fallback for anything that cannot clip to text: the gradient is ignored
+     and this colour shows, so the name is never invisible. */
+  -webkit-text-fill-color: transparent;
+}
+/* Clipping to text is decoration. If the browser reports it cannot do it, or
+   the user wants high contrast, fall back to a solid readable colour. */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .wordmark {
+    color: var(--color-fg);
+    -webkit-text-fill-color: currentColor;
+    background-image: none;
+  }
+}
+
+/* The board frame: a recessed bevel so the squares read as an object sitting
+   in the page rather than an image pasted onto it. */
+.board-frame {
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 1px oklch(0 0 0 / 0.45),
+    0 0 0 2px oklch(from var(--color-accent) l c h / 0.14),
+    var(--shadow-float);
+}
+
+/* Concentric rings behind the microphone. Drawn on a pseudo-element so they
+   sit strictly behind the button and can never affect its hit area or the
+   contrast of its label. */
+.mic-halo {
+  position: relative;
+}
+.mic-halo::before {
+  content: "";
+  position: absolute;
+  inset: -22px;
+  border-radius: 9999px;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      closest-side,
+      oklch(from var(--color-accent) l c h / 0.16),
+      transparent 72%
+    );
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+.mic-halo[data-active="true"]::before {
+  opacity: 1;
+}
+
+/* A quiet moving sheen for the idle mic, so the primary control invites a
+   press without shouting. Slow enough not to pull the eye off the board. */
+@keyframes sheen-drift {
+  0%, 100% { transform: translateX(-18%); }
+  50%      { transform: translateX(18%); }
+}
+.sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 36%,
+    oklch(1 0 0 / 0.07) 50%,
+    transparent 64%
+  );
+  animation: sheen-drift 7s ease-in-out infinite;
+}
+
+/* Section labels: small, tracked, quiet. Uses the full muted token rather
+   than an alpha of it — see the contrast note in the high-contrast block. */
+.eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
+}
+
+/* High contrast strips every decoration here. A low-vision user asked for
+   maximum legibility, not a brass sheen, and a gradient behind glyphs is
+   exactly what makes text hard to resolve. */
+:root[data-contrast="high"] body,
+:root[data-theme="high-contrast"] body {
+  background-image: none;
+}
+:root[data-contrast="high"] .wordmark,
+:root[data-theme="high-contrast"] .wordmark {
+  background-image: none;
+  color: var(--color-fg);
+  -webkit-text-fill-color: currentColor;
+}
+:root[data-contrast="high"] .panel,
+:root[data-theme="high-contrast"] .panel,
+:root[data-contrast="high"] .panel-float,
+:root[data-theme="high-contrast"] .panel-float {
+  box-shadow: none;
+}
+:root[data-contrast="high"] .sheen::after,
+:root[data-theme="high-contrast"] .sheen::after,
+:root[data-contrast="high"] .mic-halo::before,
+:root[data-theme="high-contrast"] .mic-halo::before {
+  display: none;
+}
+:root[data-contrast="high"] .board-frame,
+:root[data-theme="high-contrast"] .board-frame {
+  box-shadow: 0 0 0 2px var(--color-fg);
+}
+
+/* Decorative animation is motion, and the reduced-motion block above only
+   zeroes durations. Drop these outright instead. */
+@media (prefers-reduced-motion: reduce) {
+  .sheen::after { animation: none; display: none; }
+  .mic-halo::before { transition: none; }
+}

@@ -177,7 +177,7 @@ export function FirstRun({ onClose, onTryCommand }: FirstRunProps) {
         aria-labelledby="first-run-title"
         aria-describedby="first-run-body"
         tabIndex={-1}
-        className="w-full max-w-lg rounded-2xl border border-border bg-bg-raised p-6 shadow-2xl focus:outline-none"
+        className="panel-float w-full max-w-lg p-6 focus:outline-none"
       >
         <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">
           Getting started · {step + 1} of {STEPS.length}

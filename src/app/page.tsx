@@ -292,7 +292,7 @@ export default function Home() {
           <div className="flex items-center gap-3 min-w-0 shrink-0">
             <h1
               className={cn(
-                "font-display font-semibold tracking-tight whitespace-nowrap transition-[font-size] duration-300",
+                "wordmark font-display font-semibold tracking-tight whitespace-nowrap transition-[font-size] duration-300",
                 inPlay ? "text-base" : "text-lg",
               )}
             >
