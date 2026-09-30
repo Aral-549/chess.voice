@@ -1,0 +1,52 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1920px;height:1080px;overflow:hidden;position:relative;background:#0a0704;
+  background-image:radial-gradient(1400px 800px at 50% 30%, rgba(232,168,56,.10), transparent 62%);}
+.scene{position:absolute;inset:0;display:grid;place-items:center}
+.tilt{transform:perspective(2600px) rotateX(24deg) rotateZ(-3deg);transform-style:preserve-3d;
+  filter:drop-shadow(0 70px 90px rgba(0,0,0,.9))}
+.board{width:940px;height:940px;display:grid;grid-template-columns:repeat(8,1fr);
+  border-radius:8px;overflow:hidden;position:relative;
+  box-shadow:0 0 0 2px rgba(0,0,0,.7),0 0 0 5px rgba(232,168,56,.30),0 0 90px rgba(232,168,56,.13)}
+.sq{aspect-ratio:1;display:grid;place-items:center;font-size:76px;line-height:1;position:relative}
+.sq.l{background:linear-gradient(155deg,#f2e6d0,#dcc9a9)}
+.sq.d{background:linear-gradient(155deg,#5d4433,#3b2a1d)}
+.sq.w{color:#fffaf0;text-shadow:0 2px 3px rgba(0,0,0,.45)}
+.sq.b{color:#150f09;text-shadow:0 1px 1px rgba(255,255,255,.14)}
+/* the square that was just spoken */
+.sq.hit{background:linear-gradient(155deg,#ffd071,#e8a838)}
+.sq.hit.w{color:#231703;text-shadow:none}
+.sq.hit::after{content:"";position:absolute;inset:0;
+  box-shadow:inset 0 0 0 4px #ffe6ab,0 0 70px 14px rgba(255,196,84,.75)}
+/* sound rings, centred on that square, lying flat on the board */
+.rings{position:absolute;left:68.75%;top:68.75%;transform:translate(-50%,-50%);
+  display:grid;place-items:center;pointer-events:none;z-index:3}
+.ring{position:absolute;border-radius:50%;border-style:solid;border-color:rgba(255,206,110,.85);
+  box-shadow:0 0 26px rgba(255,190,70,.5)}
+.glow{position:absolute;left:68.75%;top:68.75%;transform:translate(-50%,-50%);
+  width:980px;height:980px;border-radius:50%;pointer-events:none;z-index:2;mix-blend-mode:screen;
+  background:radial-gradient(closest-side, rgba(255,190,70,.30), rgba(255,170,40,.07) 55%, transparent 74%)}
+.vig{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(1300px 820px at 50% 44%, transparent 34%, rgba(0,0,0,.86) 100%)}
+</style></head><body>
+<div class="scene"><div class="tilt">
+  <div class="board" id="b"><div class="glow"></div><div class="rings" id="r"></div></div>
+</div></div>
+<div class="vig"></div>
+<script>
+const BACK="♖♘♗♕♔♗♘♖", PAWN="♙♙♙♙♙♙♙♙";
+const P={0:BACK,1:PAWN,6:PAWN,7:BACK};
+const b=document.getElementById('b');
+for(let r=0;r<8;r++)for(let f=0;f<8;f++){
+  const d=document.createElement('div');
+  d.className='sq '+((r+f)%2?'d':'l');
+  if(r===5&&f===5){ d.classList.add('hit','w'); d.textContent='♘'; }        // knight on f3
+  else if(P[r] && !(r===7&&f===6)){ d.textContent=P[r][f]; d.classList.add(r<2?'b':'w'); }
+  b.appendChild(d);
+}
+const R=document.getElementById('r');
+[260,430,620,840,1090,1380].forEach((s,i)=>{const e=document.createElement('div');
+  e.className='ring'; e.style.width=s+'px'; e.style.height=s+'px';
+  e.style.opacity=(0.62-i*0.095).toFixed(2); e.style.borderWidth=(5-i*0.7)+'px';
+  R.appendChild(e);});
+</script></body></html>
