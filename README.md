@@ -11,7 +11,7 @@ coach answers in the IBCA tournament alphabet blind players already use.
 
 [![CI](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml/badge.svg)](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-618%20passing-brightgreen.svg)](#verification)
+[![Tests](https://img.shields.io/badge/tests-623%20passing-brightgreen.svg)](#verification)
 
 
 <table>
@@ -241,7 +241,7 @@ reliable `AudioWorklet` and microphone support.
 ## Verification
 
 ```bash
-npm test              # 618 tests across 30 files
+npm test              # 623 tests across 31 files
 npx tsc --noEmit      # strict typecheck
 npm run lint
 npm run build
@@ -292,7 +292,7 @@ confidently wrong answer is the failure mode that matters:
 | Auth & data | Supabase — magic-link auth, Postgres, row level security |
 | Audio | Web Audio API — dual AudioContext, AudioWorklet |
 | Styling | Tailwind CSS |
-| Tests | Vitest — 618 tests, 30 files |
+| Tests | Vitest — 623 tests, 31 files |
 | Hosting | Vercel |
 
 ## License

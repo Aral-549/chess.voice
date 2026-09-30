@@ -382,7 +382,7 @@ export default function Home() {
             </p>
           )}
 
-          <div className="shrink-0 flex flex-col gap-3">
+          <div className={cn("shrink-0 flex flex-col", inPlay ? "gap-2" : "gap-3")}>
           <ListenButton
             status={coach.status}
             isHolding={isHoldingJ}
@@ -398,12 +398,14 @@ export default function Home() {
             onCancel={coach.cancelListening}
             onRepeat={coach.repeatLast}
             voiceError={coach.voiceError}
+            compact={inPlay}
           />
           <CaptionBar
             caption={coach.caption}
             partialText={coach.partialText}
             status={coach.status}
             onRepeat={coach.repeatLast}
+            compact={inPlay}
           />
           {/* Emphasised whenever typing is the only way through — the browser
               never supported voice, or this session's attempt failed. */}

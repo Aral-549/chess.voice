@@ -8,6 +8,69 @@ Entries are newest first.
 
 ---
 
+## 2026-09-30 — The conversation had 51 pixels to live in
+
+Reported from real use while recording the demo: "same scrolling problem for
+the chat section". The scrolling was not the problem.
+
+- **Symptom:** the conversation scrolled a message out of view as soon as the
+  next one arrived, so it read as a broken auto-scroll.
+- **What was actually measured:** the scroll behaviour was correct. Only the
+  `<ol>` scrolls (no scrollable ancestor), it follows the bottom when at the
+  bottom, and it stays put when the reader has scrolled up. Verified on the
+  live deployment. The real number was the height:
+
+  | viewport | conversation height (before) | after |
+  |---|---|---|
+  | 1920x1080 | 363px | 483px |
+  | 1440x900  | 183px | 303px |
+  | 1366x768  | **51px** | 171px |
+
+  51px is one line. Any new message necessarily scrolled the previous one out
+  of view, which is indistinguishable from a scrolling bug.
+- **Root cause:** the microphone button is a fixed 176px whether or not a game
+  is under way, and the caption bar keeps its full padding and a 64px minimum.
+  On arrival that is right, since the microphone is the thing you are looking
+  for. Once you are playing it is the conversation you need to see, and nothing
+  ever handed the space back.
+- **Stage/module:** `components/voice/ListenButton.tsx`,
+  `components/voice/CaptionBar.tsx`, `app/page.tsx`
+- **Fix:** both take a `compact` prop driven by `inPlay`, the same signal the
+  header collapse already uses. Microphone 176px to 112px, caption padding and
+  minimum height reduced, column gap tightened. Deliberately keyed on game
+  state and not on viewport height: a narrow window before the first move still
+  gets the full-size microphone.
+- **Verified live:** 0 axe violations, no horizontal scroll, no console errors,
+  microphone 176px before the first move and 112px after.
+- **Regression case added:** `src/lib/__tests__/compact-play-layout.test.ts`
+- **Status:** verified
+
+---
+
+## 2026-09-30 — Captions showed recogniser noise the moment the mic opened
+
+- **Symptom:** pressing J put a fragment like `3'` on screen in quotation
+  marks, as if the player had said it, before they had spoken.
+- **Root cause:** partial transcripts stream character by character and include
+  whatever the recogniser makes of a breath, a click or the room. With 92 chess
+  keyterms biasing it toward notation, that noise comes back shaped like
+  notation. The caption bar rendered every partial verbatim.
+- **Stage/module:** `hooks/useVoiceChessCoach.ts`, the `partial-transcript`
+  handler
+- **Fix:** `meaningfulPartial()` withholds a partial with no letter in it.
+  Every real command in this app contains one: "e4", "knight to f3", "castle",
+  "Anna 4". A letterless fragment cannot become a move, so showing it only
+  makes the app look like it is mishearing badly.
+- **Deliberate limit:** display only. The audio still streams to the agent and
+  the final transcript is never filtered, so nothing is dropped from the actual
+  conversation. A test asserts the filter is not applied to `final-transcript`.
+- **Not reproduced headlessly:** a fake-audio Playwright run produced no
+  transcript events at all, so this fix is reasoned from the event path rather
+  than from a captured instance of the fragment. If `3'` still appears, the
+  next step is capturing the raw `transcript.user` payload from a real session.
+- **Regression case added:** `src/lib/__tests__/compact-play-layout.test.ts`
+- **Status:** fixed, pending confirmation on real hardware
+
 ## 2026-09-30 — The chessboard was thirty-two anonymous tab stops
 
 Found by running axe-core against the production build. It had been there from

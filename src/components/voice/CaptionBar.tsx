@@ -8,6 +8,8 @@ interface CaptionBarProps {
   partialText: string;
   status?: string;
   onRepeat?: () => void;
+  /** Give vertical space back to the conversation once a game is under way. */
+  compact?: boolean;
 }
 
 /**
@@ -15,7 +17,7 @@ interface CaptionBarProps {
  * of what the speech recognizer hears in real time.
  * Includes speaker labels, copy action, and smooth accessibility styling.
  */
-export function CaptionBar({ caption, partialText, status, onRepeat }: CaptionBarProps) {
+export function CaptionBar({ caption, partialText, status, onRepeat, compact = false }: CaptionBarProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -29,9 +31,9 @@ export function CaptionBar({ caption, partialText, status, onRepeat }: CaptionBa
   const speaker = partialText ? "you" : isThinking ? "thinking" : caption ? "coach" : "idle";
 
   return (
-    <div className="panel relative w-full p-5 sm:p-6 text-center transition-all duration-300 border-border/80 shadow-md">
+    <div className={`panel relative w-full text-center transition-all duration-300 border-border/80 shadow-md ${compact ? "p-3" : "p-5 sm:p-6"}`}>
       {/* Speaker header pill */}
-      <div className="flex items-center justify-between mb-3 border-b border-border/60 pb-2.5">
+      <div className={`flex items-center justify-between border-b border-border/60 ${compact ? "mb-2 pb-1.5" : "mb-3 pb-2.5"}`}>
         <div className="flex items-center gap-2">
           {speaker === "you" ? (
             <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-accent/20 text-accent font-mono text-xs font-semibold">
@@ -102,7 +104,7 @@ export function CaptionBar({ caption, partialText, status, onRepeat }: CaptionBa
       </div>
 
       {/* Main caption text — unblocked live streaming */}
-      <div className="min-h-16 flex items-center justify-center px-1">
+      <div className={`flex items-center justify-center px-1 ${compact ? "min-h-10" : "min-h-16"}`}>
         {partialText ? (
           <p className="font-mono text-lg text-accent/90 italic tracking-wide break-words max-w-full">
             <span className="sr-only-live" aria-hidden="true">

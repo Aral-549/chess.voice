@@ -23,6 +23,12 @@ interface ListenButtonProps {
   onRepeat?: () => void;
   /** Last voice failure, or null. Shown until the next attempt clears it. */
   voiceError?: VoiceFailure | null;
+  /** Shrink once a game is under way. The microphone is the hero on arrival,
+   *  but it holds a fixed 176px forever, and at 1366x768 that left the
+   *  conversation 51px of visible height: one line, scrolling itself out of
+   *  view on every message. Once you are playing, the conversation is the
+   *  thing you need to see. See BUGLOG 2026-09-30. */
+  compact?: boolean;
 }
 
 /**
@@ -39,6 +45,7 @@ export function ListenButton({
   onCancel,
   onRepeat,
   voiceError = null,
+  compact = false,
 }: ListenButtonProps) {
   const listening = isHolding || status === "listening";
   const connecting = !isHolding && status === "connecting";
@@ -46,7 +53,7 @@ export function ListenButton({
   const speaking = !isHolding && status === "speaking";
 
   return (
-    <div className="flex flex-col items-center gap-4 w-full">
+    <div className={cn("flex flex-col items-center w-full", compact ? "gap-2" : "gap-4")}>
       {/* Primary Voice Action Button */}
       <div
         className="mic-halo relative flex items-center justify-center"
@@ -94,7 +101,7 @@ export function ListenButton({
           }
           className={cn(
             "relative flex flex-col items-center justify-center rounded-full border-3 transition-all duration-200 shadow-xl cursor-pointer select-none",
-            "h-36 w-36 sm:h-44 sm:w-44",
+            compact ? "h-24 w-24 sm:h-28 sm:w-28" : "h-36 w-36 sm:h-44 sm:w-44",
             listening
               ? "listening-pulse border-accent bg-accent text-bg scale-105 shadow-accent/50 shadow-2xl"
               : connecting
@@ -122,7 +129,7 @@ export function ListenButton({
           {/* Icon / Centerpiece */}
           <div className="mb-1">
             {listening ? (
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className={cn(compact ? "w-6 h-6" : "w-8 h-8 sm:w-10 sm:h-10", "animate-bounce")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -164,7 +171,7 @@ export function ListenButton({
                 />
               </svg>
             ) : (
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className={cn(compact ? "w-6 h-6" : "w-8 h-8 sm:w-10 sm:h-10", "text-accent")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -175,7 +182,7 @@ export function ListenButton({
             )}
           </div>
 
-          <span className="text-base sm:text-lg font-bold tracking-tight">
+          <span className={cn("font-bold tracking-tight", compact ? "text-[11px] sm:text-xs" : "text-base sm:text-lg")}>
             {isHolding ? "Listening…" : listening ? "Listening" : connecting ? "Connecting…" : thinking ? "Thinking…" : speaking ? "Interrupt" : "Hold J to Talk"}
           </span>
         </button>

@@ -52,6 +52,25 @@ export interface VoiceChessCoachOptions {
   onSettingsAction?: (setting: "high_contrast" | "sound_cues" | "announce_captions", enable?: boolean) => void;
 }
 
+/**
+ * Partial transcripts arrive character by character and include whatever the
+ * recognizer makes of a breath, a click, or the room. With chess keyterms
+ * biasing it toward notation, that noise comes back as fragments like "3" or
+ * "3'" the instant the microphone opens, which then sit on screen in quotes as
+ * if the player had said them.
+ *
+ * Every real command in this app contains a letter: "e4", "knight to f3",
+ * "castle", "Anna 4". A fragment with no letter in it cannot become a move, so
+ * showing it only makes the app look like it is mishearing badly.
+ *
+ * This is display-only. The fragment is still streamed to the agent, and the
+ * final transcript is never filtered, so nothing is dropped from the actual
+ * conversation. See BUGLOG 2026-09-30.
+ */
+function meaningfulPartial(text: string): string {
+  return /[a-z]/i.test(text) ? text : "";
+}
+
 let idCounter = 0;
 const nextId = () => `entry-${++idCounter}-${Date.now()}`;
 
@@ -463,7 +482,7 @@ export function useVoiceChessCoach(options?: VoiceChessCoachOptions) {
       engine.on("listening-stop", () => {
         setStatus((s) => (s === "listening" ? "idle" : s));
       }),
-      engine.on("partial-transcript", ({ text }) => setPartialText(text)),
+      engine.on("partial-transcript", ({ text }) => setPartialText(meaningfulPartial(text))),
       engine.on("final-transcript", ({ text }) => {
         setPartialText("");
         if (!text) return;
