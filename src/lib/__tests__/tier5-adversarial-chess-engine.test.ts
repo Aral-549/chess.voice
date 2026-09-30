@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Tier 5 Adversarial Chess Engine & Rules Probe Suite
+// chess.voice — Tier 5 Adversarial Chess Engine & Rules Probe Suite
 // Author: challenger_tier5_1 (critic & specialist)
 // Scope: FIDE & IBCA rules, underpromotions, en passant, resignation,
 //        board scan ordering, difficulty divergence, latency benchmark,

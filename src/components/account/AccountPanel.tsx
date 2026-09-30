@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================================
-// VoiceChessmate — account panel
+// chess.voice — account panel
 //
 // Sign-in is a magic link and nothing else. No password field, no CAPTCHA, no
 // social buttons, no timed redirect. For a screen reader user a password flow

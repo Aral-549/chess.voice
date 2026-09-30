@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Modern Difficulty Selection Component
+// chess.voice — Modern Difficulty Selection Component
 // Accessible difficulty controls with keyboard hotkeys (1-4)
 // and tournament Elo approximations
 // ============================================================

@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — "why was that bad?"
+// chess.voice — "why was that bad?"
 //
 // The feature a click interface cannot really have. On a board, analysis is a
 // wall of arrows and numbers nobody reads. In a conversation it is the whole

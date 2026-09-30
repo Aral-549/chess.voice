@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Token Minting API Route
+// chess.voice — Token Minting API Route
 //
 // Mints short-lived AssemblyAI tokens for browser WebSocket auth, against a
 // durable per-identity budget. The API key never reaches the client, and

@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — how long the player actually waited
+// chess.voice — how long the player actually waited
 //
 // Contract: contracts/latency-measurement.md
 //

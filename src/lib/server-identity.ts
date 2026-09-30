@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — request → identity, for route handlers
+// chess.voice — request → identity, for route handlers
 //
 // Small shared wrapper so every route resolves identity the same way. The
 // policy itself lives in lib/identity.ts (pure, tested); this only reads the

@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Modern Visual Chess Board
+// chess.voice — Modern Visual Chess Board
 // Inspired by tournament UI: Blue Ocean Marble theme, SVG pieces,
 // Opponent & Player profile bars with digital clocks,
 // and full accessibility + click-to-move support.

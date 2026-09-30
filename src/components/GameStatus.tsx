@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Modern Game Status Bar
+// chess.voice — Modern Game Status Bar
 // Shows turn, check/checkmate, captures, difficulty, and voice agent status
 // Fully accessible with ARIA live regions and semantic landmarks
 // ============================================================

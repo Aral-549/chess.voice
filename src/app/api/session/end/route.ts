@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — session reconciliation
+// chess.voice — session reconciliation
 //
 // A mint reserves the full MAX_SESSION_SECONDS pessimistically. This hands
 // back the difference when the client reports how long the session actually

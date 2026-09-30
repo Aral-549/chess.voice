@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================================
-// VoiceChessmate — the first thirty seconds
+// chess.voice — the first thirty seconds
 //
 // Until now the app opened straight onto a live board. The one instruction was
 // a "Hold J to speak" line in the header that is `hidden sm:block`, so on a

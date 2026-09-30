@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Mock Voice Agent Harness Test Suite
+// chess.voice — Mock Voice Agent Harness Test Suite
 // Verifies headless synthetic voice agent interactions in CI
 // Zero network calls, zero AudioContext, zero API keys required.
 // ============================================================
@@ -40,7 +40,7 @@ describe('MockVoiceAgentManager CI Harness', () => {
 
       await agent.connect({
         system_prompt: 'You are a chess voice assistant.',
-        greeting: 'Welcome to VoiceChessmate.',
+        greeting: 'Welcome to chess.voice.',
       });
 
       expect(agent.getStatus()).toBe('ready');
@@ -301,7 +301,7 @@ describe('MockVoiceAgentManager CI Harness', () => {
 
       // Step 3: Connect
       await agent.connect({
-        system_prompt: 'VoiceChessmate Assistant',
+        system_prompt: 'chess.voice Assistant',
         greeting: 'Chess companion ready.',
       });
       expect(agent.getStatus()).toBe('ready');

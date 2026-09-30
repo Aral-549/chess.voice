@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — End-to-End Requirements Test Suite
+// chess.voice — End-to-End Requirements Test Suite
 // Derived strictly from ORIGINAL_REQUEST.md & PROJECT.md
 // Covers 13 Functional Requirement Categories (47 Distinct Tests)
 // ============================================================

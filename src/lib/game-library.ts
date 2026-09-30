@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — narrated games
+// chess.voice — narrated games
 //
 // A small library of famous games you can listen to the way you'd listen to a
 // podcast. This is the most voice-native thing in the app: on a board it is

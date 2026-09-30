@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — rating
+// chess.voice — rating
 //
 // Pure Elo. The opponent's rating is the difficulty the player already sees in
 // the UI, so the number on screen and the number that moves their rating are

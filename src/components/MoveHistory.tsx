@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Modern Move History Panel
+// chess.voice — Modern Move History Panel
 // Displays moves in standard two-column chess notation
 // Fully accessible with semantic table markup & keyboard scrolling
 // ============================================================

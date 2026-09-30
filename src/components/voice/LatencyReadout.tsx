@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================================
-// VoiceChessmate — the latency readout
+// chess.voice — the latency readout
 //
 // Off by default, toggled with L. Two reasons it is not always on:
 //

@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — structured stage logging
+// chess.voice — structured stage logging
 //
 // Workflow rule: log structured input/output at every pipeline stage
 // boundary, not print statements. That is what makes a scattered bug

@@ -10,7 +10,7 @@ We aim to acknowledge reports within 72 hours.
 
 ## Credential handling
 
-VoiceChessmate never exposes an AssemblyAI API key to the browser.
+chess.voice never exposes an AssemblyAI API key to the browser.
 
 - `ASSEMBLYAI_API_KEY` is read **server-side only**, inside
   `src/app/api/token/route.ts`.

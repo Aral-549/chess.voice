@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Chess.com-style Sound Engine
+// chess.voice — Chess.com-style Sound Engine
 // Pure Web Audio API synthesis — no external files needed.
 //
 // All sounds are designed to closely match chess.com's audio:

@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — voice budget policy
+// chess.voice — voice budget policy
 //
 // Pure decisions only: how much a caller may reserve, and how much to refund
 // when a session is reconciled. No database, no request, no clock reads that

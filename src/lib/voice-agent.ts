@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — AssemblyAI Voice Agent WebSocket Manager
+// chess.voice — AssemblyAI Voice Agent WebSocket Manager
 // Handles connection, audio streaming, and event routing
 //
 // DUAL AudioContext design:

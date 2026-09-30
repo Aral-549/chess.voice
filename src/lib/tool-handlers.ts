@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Tool Call Handlers
+// chess.voice — Tool Call Handlers
 // Maps AssemblyAI tool_call events to chess engine operations
 //
 // Move matching: scores every legal move against the spoken

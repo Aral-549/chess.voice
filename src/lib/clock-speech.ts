@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — clock, said out loud
+// chess.voice — clock, said out loud
 //
 // A screen reader reads "04:56" as "zero four colon five six". Nobody says the
 // time that way, and under time pressure the listener has to translate it. The

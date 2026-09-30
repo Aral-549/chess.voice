@@ -477,7 +477,7 @@ describe('Adversarial Stress-Testing & Probes (Tier 5.2)', () => {
         });
 
         await mockAgent.connect({
-          greeting: 'Welcome to VoiceChessmate!',
+          greeting: 'Welcome to chess.voice!',
         });
 
         expect(mockAgent.getStatus()).toBe('ready');

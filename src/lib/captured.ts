@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — captured material, derived from a position
+// chess.voice — captured material, derived from a position
 //
 // Taken from the FEN rather than tracked alongside it. A derived value cannot
 // drift from the board: resume, undo and replay all produce the right answer

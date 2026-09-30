@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Live Transcript Panel
+// chess.voice — Live Transcript Panel
 // Shows real-time conversation with streaming text effect
 // Fully accessible for screen readers with ARIA log & live regions
 // ============================================================

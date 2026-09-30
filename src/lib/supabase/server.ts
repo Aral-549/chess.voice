@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — server-side Supabase access
+// chess.voice — server-side Supabase access
 //
 // Two clients, deliberately separate:
 //

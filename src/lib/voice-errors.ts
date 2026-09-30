@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — what to say when voice fails
+// chess.voice — what to say when voice fails
 //
 // Failure messages are the one piece of copy guaranteed to be read by someone
 // having a bad time, and here they are *heard* rather than read: they go

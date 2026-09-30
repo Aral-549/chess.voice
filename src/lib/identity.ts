@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — anonymous device identity
+// chess.voice — anonymous device identity
 //
 // A signed cookie that says "this is the same browser as last time", so an
 // anonymous player has a budget and can resume a game without signing up.

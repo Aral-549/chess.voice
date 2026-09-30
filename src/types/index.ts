@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — TypeScript Type Definitions
+// chess.voice — TypeScript Type Definitions
 // ============================================================
 
 import { Chess, Square, Move, Color, PieceSymbol } from 'chess.js';

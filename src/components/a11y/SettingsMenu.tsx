@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================================
-// VoiceChessmate — settings dropdown
+// chess.voice — settings dropdown
 //
 // Everything that used to sit permanently across the header and above the
 // board, folded into one menu. The header was a wall of thirty-odd controls

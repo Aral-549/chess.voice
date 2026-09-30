@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Game-over verdict
+// chess.voice — Game-over verdict
 //
 // One place decides whether the player won, lost, or drew. It exists as a pure
 // function because the verdict drives the *audio* verdict, and this app is used

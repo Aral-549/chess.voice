@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — magic link callback
+// chess.voice — magic link callback
 //
 // Supabase redirects here with a one-time code. We exchange it for a session,
 // then send the player straight back to the board.

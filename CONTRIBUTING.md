@@ -1,4 +1,4 @@
-# Contributing to VoiceChessmate
+# Contributing to chess.voice
 
 Thanks for your interest. This project has an unusual engineering discipline
 for its size, because it is assistive software: a wrong move announced

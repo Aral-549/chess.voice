@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — claim anonymous games after sign-in
+// chess.voice — claim anonymous games after sign-in
 //
 // Games played before signing in belong to a device. This re-owns them to the
 // account and recomputes the rating from the full history.

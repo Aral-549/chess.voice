@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Chess Engine (chess.js wrapper)
+// chess.voice — Chess Engine (chess.js wrapper)
 // Manages game state, move validation, and board narration
 // ============================================================
 

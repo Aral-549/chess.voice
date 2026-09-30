@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================================
-// VoiceChessmate — resizable divider between the conversation and the board
+// chess.voice — resizable divider between the conversation and the board
 //
 // A drag handle would be the obvious thing, but a drag handle alone is a
 // mouse-only control, and this project's rule is that every feature has a

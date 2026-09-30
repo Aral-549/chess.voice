@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Speech Synthesis & Audio Pipeline Engine
+// chess.voice — Speech Synthesis & Audio Pipeline Engine
 // Provides hardened spoken feedback for board descriptions, opponent
 // moves, and keyboard shortcut responses.
 //

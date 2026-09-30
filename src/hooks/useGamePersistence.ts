@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================================
-// VoiceChessmate — save and resume
+// chess.voice — save and resume
 //
 // Losing a game in progress costs a blind player the position they were
 // holding in memory. Resume is an accessibility feature, so the rules here are

@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// VoiceChessmate — browser Supabase client
+// chess.voice — browser Supabase client
 //
 // Auth only. This client carries the public anon key, which is safe to ship:
 // every application table has RLS enabled with no permissive policy, so the

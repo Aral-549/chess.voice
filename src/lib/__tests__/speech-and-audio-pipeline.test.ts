@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — End-to-End Speech & Audio Pipeline Test Suite
+// chess.voice — End-to-End Speech & Audio Pipeline Test Suite
 //
 // Comprehensive opaque-box automated verification for Tiers 1-4
 // covering R1 through R5 per TEST_INFRA.md and PROJECT.md:

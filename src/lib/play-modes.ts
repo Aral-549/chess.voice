@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — play modes
+// chess.voice — play modes
 //
 // Blindfold and hands-free. Both are pure state machines so the rules can be
 // tested without a board, a microphone or a browser.

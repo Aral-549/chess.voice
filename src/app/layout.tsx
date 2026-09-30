@@ -32,7 +32,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VoiceChessmate — Accessible Chess Through Conversation",
+  title: "chess.voice — tournament chess played entirely by voice",
   description:
     "A conversational chess companion for blind and visually impaired players. Play chess entirely through voice using AssemblyAI's Voice Agent API.",
 };

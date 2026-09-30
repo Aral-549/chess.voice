@@ -296,7 +296,7 @@ export default function Home() {
                 inPlay ? "text-base" : "text-lg",
               )}
             >
-              ♔ VoiceChessmate
+              chess.voice
             </h1>
             {!inPlay && (
               <p className="text-xs text-fg-muted whitespace-nowrap">Hold J to speak</p>

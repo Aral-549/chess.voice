@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================================
-// VoiceChessmate — the column beside the board
+// chess.voice — the column beside the board
 //
 // Clock, identity and captured material for one side. This lives to the left
 // and right of the board because the space was already there and empty, and

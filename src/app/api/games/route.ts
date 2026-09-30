@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — game persistence
+// chess.voice — game persistence
 //
 // GET  /api/games            → resume payload + recent history
 // POST /api/games            → create or update the current game

@@ -1,4 +1,4 @@
-# VoiceChessmate
+# chess.voice
 
 > Play tournament chess entirely by voice — no screen, no mouse, no sighted help.
 
@@ -7,7 +7,7 @@
 Press **J** and say a move. Plain notation works ("e4", "knight to f3"), and the
 coach answers in the IBCA tournament alphabet blind players already use.
 
-![VoiceChessmate: tournament chess played entirely by voice, showing a board with the files named Anna, Bella, Cesar, David, Eva, Felix, Gustav, Hector and a knight highlighted on Felix 3](./assets/cover/voicechessmate-cover-16x9-v2.png)
+![chess.voice: tournament chess played entirely by voice, showing a board with the files named Anna, Bella, Cesar, David, Eva, Felix, Gustav, Hector and a knight highlighted on Felix 3](./assets/cover/chess-voice-cover-16x9.png)
 
 [![CI](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml/badge.svg)](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
@@ -25,7 +25,7 @@ coach answers in the IBCA tournament alphabet blind players already use.
 </tr>
 </table>
 
-[Pitch deck (PDF)](./assets/deck/VoiceChessmate_Pitch_Deck.pdf) · [Submission copy](./assets/submission/SUBMISSION.md)
+[Pitch deck (PDF)](./assets/deck/chess.voice_Pitch_Deck.pdf) · [Submission copy](./assets/submission/SUBMISSION.md)
 
 ---
 
@@ -48,7 +48,7 @@ helper, a braille board you cannot share with a remote opponent, or a text
 interface that requires memorising the entire position with no way to ask
 about it.
 
-**VoiceChessmate removes the interface.** You speak your move. You hear what
+**chess.voice removes the interface.** You speak your move. You hear what
 happened. You can ask about the position the way you would ask a person sitting
 across the board.
 
@@ -90,7 +90,7 @@ thresholds are treated as a safety feature, not a UX preference.
 that is exactly the alphabet chess uses. Getting `Bd3` wrong by one letter is a
 legal-but-different move.
 
-VoiceChessmate speaks and understands the **1985 IBCA/FIDE phonetic alphabet**,
+chess.voice speaks and understands the **1985 IBCA/FIDE phonetic alphabet**,
 the standard used in official blind chess tournaments:
 
 | File | a | b | c | d | e | f | g | h |

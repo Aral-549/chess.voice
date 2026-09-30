@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Mock AssemblyAI Voice Agent Manager
+// chess.voice — Mock AssemblyAI Voice Agent Manager
 // Headless synthetic voice agent for testing in CI/Node environments
 // Zero network calls, zero AudioContext, zero API keys required.
 // ============================================================

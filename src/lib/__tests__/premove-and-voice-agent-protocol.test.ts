@@ -1,5 +1,5 @@
 // ============================================================
-// VoiceChessmate — Premove & AssemblyAI Protocol Verification Suite
+// chess.voice — Premove & AssemblyAI Protocol Verification Suite
 // Verifies:
 // 1. AssemblyAI Voice Agent tool.call protocol (call_id & tool_call_id)
 // 2. Chess.com-style Voice Premove features (queue, cancel, auto-execute)
