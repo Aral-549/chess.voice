@@ -7,7 +7,7 @@
 Press **J** and say a move. Plain notation works ("e4", "knight to f3"), and the
 coach answers in the IBCA tournament alphabet blind players already use.
 
-![chess.voice: tournament chess played entirely by voice, showing a board with the files named Anna, Bella, Cesar, David, Eva, Felix, Gustav, Hector and a knight highlighted on Felix 3](./assets/cover/chess-voice-cover-16x9.png)
+![A chessboard in low light, seen at an angle. A knight stands on f3 on a glowing amber square, and concentric rings spread outward from it across the board like sound.](./assets/cover/chess-voice-cover-16x9.png)
 
 [![CI](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml/badge.svg)](https://github.com/Aral-549/chess.voice/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
