@@ -53,8 +53,34 @@ describe('partial transcripts do not show recogniser noise', () => {
   it('the filter is display-only, never applied to the final transcript', () => {
     // Dropping a final transcript would lose a real move. The guard must sit
     // on partial-transcript alone.
-    expect(hook).toMatch(/partial-transcript".*meaningfulPartial/s);
+    expect(hook).toMatch(/partial-transcript"[\s\S]*meaningfulPartial/);
     const finalHandler = hook.slice(hook.indexOf('engine.on("final-transcript"'), hook.indexOf('engine.on("agent-speaking-start"'));
     expect(finalHandler).not.toContain('meaningfulPartial');
+  });
+});
+
+describe('REGRESSION: a numeric field must never become caption text', () => {
+  // BUGLOG 2026-09-30. `String(event.text ?? event.delta ?? ...)` treats any
+  // present field as usable, and `??` only skips null and undefined. Streaming
+  // protocols routinely put a sequence number in `delta`, so `String(3)` won
+  // the chain and the caption showed "3" instead of what the agent was saying.
+  const engine = readFileSync(
+    resolve(process.cwd(), 'src/lib/assemblyai-voice-engine.ts'),
+    'utf8',
+  );
+
+  it('text extraction goes through a string-only helper', () => {
+    expect(engine).toContain('function firstString');
+    expect(engine).toMatch(/typeof c === 'string'/);
+  });
+
+  it('no String(...) coercion is left on either transcript path', () => {
+    // Comments first: the doc block above firstString quotes the old code.
+    const code = engine.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    expect(code).not.toMatch(/String\(event\.(text|transcript|delta|message)\s*\?\?/);
+  });
+
+  it('both the user and the agent path use it', () => {
+    expect((engine.match(/firstString\(/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 });

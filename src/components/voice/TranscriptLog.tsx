@@ -87,8 +87,11 @@ export function TranscriptLog({ entries, onClear }: TranscriptLogProps) {
     URL.revokeObjectURL(url);
   };
 
+  // min-h keeps the conversation readable on a short screen. The column
+  // scrolls to reach it rather than squeezing it to a single line, which is
+  // what left it 51px tall at 1366x768. See BUGLOG 2026-09-30.
   return (
-    <div className="panel flex flex-col w-full border-border/80 shadow-md flex-1 min-h-0 overflow-hidden">
+    <div className="panel flex flex-col w-full border-border/80 shadow-md flex-1 min-h-[16rem] overflow-hidden">
       {/* Header with Title & Action Tools */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-2.5 bg-bg-raised">
         <div className="flex items-center gap-2">

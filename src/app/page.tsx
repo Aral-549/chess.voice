@@ -372,7 +372,7 @@ export default function Home() {
             the people least able to hunt. The transcript owns the only
             scrollbar in this column. */}
         <div
-          className="flex flex-col gap-3 px-3 pt-3 pb-3 lg:px-4 lg:pt-4 lg:pb-4 w-full shrink-0 lg:overflow-hidden min-h-0 h-full max-h-full"
+          className="flex flex-col gap-3 px-3 pt-3 pb-3 lg:px-4 lg:pt-4 lg:pb-4 w-full shrink-0 lg:overflow-y-auto overscroll-contain min-h-0 h-full max-h-full"
           style={{ ["--panel-w" as string]: `${panelWidth}px` }}
           data-panel
         >
@@ -382,7 +382,7 @@ export default function Home() {
             </p>
           )}
 
-          <div className={cn("shrink-0 flex flex-col", inPlay ? "gap-2" : "gap-3")}>
+          <div className={cn("shrink-0 flex flex-col lg:sticky lg:top-0 lg:z-10 bg-bg", inPlay ? "gap-2" : "gap-3")}>
           <ListenButton
             status={coach.status}
             isHolding={isHoldingJ}

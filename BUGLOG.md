@@ -8,6 +8,62 @@ Entries are newest first.
 
 ---
 
+## 2026-09-30 — The caption showed "3" instead of what was being spoken
+
+Reported twice from real use. My first fix was wrong, and it is worth recording
+why: I assumed the fragment was recogniser noise and filtered partial
+transcripts with no letter in them. The symptom persisted, because the cause
+was not the microphone at all.
+
+- **Symptom:** the caption showed a fragment such as `3'` **instead of** the
+  text being spoken, from the moment the microphone opened.
+- **Root cause:** both transcript paths extracted text with
+
+      String(event.text ?? event.delta ?? event.transcript ?? event.message ?? '')
+
+  `??` skips only null and undefined. It does not care about type. Streaming
+  protocols routinely carry a sequence number in `delta`, and `String(3)` is
+  `"3"` — so a numeric index won the chain and was rendered as the caption,
+  displacing the real text. The word "instead" in the report was the clue I
+  missed the first time: noise would have appeared *alongside* speech, not in
+  place of it.
+- **Stage/module:** `lib/assemblyai-voice-engine.ts`, both the
+  `transcript.user` and the agent-text branches
+- **Fix:** `firstString(...)` returns the first candidate that is actually a
+  non-empty string, skipping numbers, objects and booleans rather than
+  stringifying them.
+- **Regression case added:** `compact-play-layout.test.ts` — asserts the helper
+  exists, that it tests `typeof === 'string'`, that both paths use it, and that
+  no `String(event.x ?? ...)` coercion remains (comments stripped first, since
+  the doc block quotes the old code).
+- **Honest limit:** not reproduced locally. A fake-audio Playwright run
+  produced no transcript events, so this is fixed by reading the event path,
+  not by capturing the fragment. The reasoning is sound and the old code
+  demonstrably converts a number to a caption, but confirmation needs a real
+  session.
+- **Status:** fixed, pending confirmation on real hardware
+
+---
+
+## 2026-09-30 — The left column could not be scrolled
+
+- **Symptom:** "the left side is still not scrollable". With the conversation
+  squeezed, there was no way to reach content that did not fit.
+- **Root cause:** the column was `lg:overflow-hidden`. That was deliberate
+  earlier, to stop new messages dragging the microphone off screen, and the fix
+  then was to give the transcript its own scroll. It worked, but it also meant
+  that when the column as a whole overflowed, nothing could reach the overflow.
+- **Stage/module:** `app/page.tsx`, `components/voice/TranscriptLog.tsx`
+- **Fix:** the column is `lg:overflow-y-auto overscroll-contain`, and the
+  control block is `lg:sticky lg:top-0`, so it scrolls when it needs to while
+  the microphone stays put. The conversation panel gets `min-h-[16rem]` so it
+  is readable rather than being crushed to nothing on a short screen.
+- **Verified live:** 1280x600 scrolls 159px, 1280x520 scrolls 239px, microphone
+  pinned throughout, conversation holds 162px. At 1366x768 and above everything
+  fits, so no scrollbar appears, which is correct.
+- **Regression case added:** `compact-play-layout.test.ts`
+- **Status:** verified
+
 ## 2026-09-30 — The conversation had 51 pixels to live in
 
 Reported from real use while recording the demo: "same scrolling problem for

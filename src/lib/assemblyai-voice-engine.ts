@@ -30,6 +30,25 @@ export interface AssemblyAIEngineOptions {
 
 type Listener = (payload: never) => void;
 
+/**
+ * Pick the first field that is actually text.
+ *
+ * The previous version was `String(event.text ?? event.delta ?? ...)`, which
+ * treats any present field as usable. Streaming protocols routinely put a
+ * sequence number in `delta`, and `String(3)` is `"3"` — so a numeric index
+ * won the chain and the caption showed "3" instead of what the agent was
+ * saying. `??` only skips null and undefined; it does not care about type.
+ *
+ * A number, an object or a boolean is never transcript text. Skip to the next
+ * candidate rather than stringifying it. See BUGLOG 2026-09-30.
+ */
+function firstString(...candidates: unknown[]): string {
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.length > 0) return c;
+  }
+  return '';
+}
+
 export class AssemblyAIVoiceEngine implements VoiceEngine {
   private agent = new VoiceAgentManager();
   private listeners = new Map<VoiceEngineEvent, Set<Listener>>();
@@ -115,7 +134,7 @@ export class AssemblyAIVoiceEngine implements VoiceEngine {
     }
 
     if (type.startsWith('transcript.user')) {
-      const text = String(event.transcript ?? event.delta ?? event.text ?? '');
+      const text = firstString(event.transcript, event.delta, event.text);
       if (!text) return;
       const isFinal =
         !type.endsWith('.delta') || !!(event.end_of_turn || event.is_final || event.final);
@@ -152,7 +171,7 @@ export class AssemblyAIVoiceEngine implements VoiceEngine {
       type === 'reply.transcript' ||
       type === 'agent.message'
     ) {
-      const text = String(event.text ?? event.delta ?? event.transcript ?? event.message ?? '');
+      const text = firstString(event.text, event.delta, event.transcript, event.message);
       if (text) {
         this.emit('agent-speaking-text', { text });
       }
