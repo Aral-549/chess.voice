@@ -2,7 +2,10 @@
 
 > Play tournament chess entirely by voice — no screen, no mouse, no sighted help.
 
-Built on the [AssemblyAI Voice Agent API](https://www.assemblyai.com/docs/voice-agents/voice-agent-api)
+**[Play it live](https://chess-voice-weld.vercel.app)** . Built on the [AssemblyAI Voice Agent API](https://www.assemblyai.com/docs/voice-agents/voice-agent-api)
+
+Press **J** and say a move. Plain notation works ("e4", "knight to f3"), and the
+coach answers in the IBCA tournament alphabet blind players already use.
 
 ![VoiceChessmate](./assets/cover/voicechessmate-cover-16x9.png)
 
